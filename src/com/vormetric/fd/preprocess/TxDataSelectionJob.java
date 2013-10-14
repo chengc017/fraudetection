@@ -19,8 +19,8 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.CSVLineRecordReader;
-import org.apache.hadoop.mapreduce.lib.input.CSVNLineInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
@@ -98,7 +98,7 @@ public class TxDataSelectionJob extends Configured implements Tool {
 		job.setJarByClass(TxDataSelectionJob.class);
 		job.setNumReduceTasks(3);
 		
-		job.setInputFormatClass(CSVNLineInputFormat.class);
+		job.setInputFormatClass(TextInputFormat.class);
 		job.setOutputFormatClass(TextOutputFormat.class);
 		
 		job.setOutputKeyClass(LongWritable.class);
@@ -121,68 +121,69 @@ public class TxDataSelectionJob extends Configured implements Tool {
 	}
 	
 	public static class TxDataSelectionMapper extends
-		Mapper<LongWritable, List<Text>, LongWritable, Text> {
+		Mapper<LongWritable, Text, LongWritable, Text> {
 		public static final Log logger = LogFactory.getLog(TxDataSelectionMapper.class);
 		
-		protected void map(LongWritable key, List<Text> values, Context context)
+		protected void map(LongWritable key, Text value, Context context)
 			throws IOException, InterruptedException {
-			if(values.size() < 405) {
-				logger.info("######## Map Input values size:" + values.size());
+			String [] lineCloumns = value.toString().split(",");
+			if(lineCloumns.length < 405) {
+				logger.info("######## Filter out invalid line that has " + lineCloumns.length + " clomuns only.");
 				return;
 			}
-			String eventType = values.get(4).toString();
+			String eventType = lineCloumns[4].toString();
 			StringBuffer linebuf = new StringBuffer();
 			if(eventType.equals("payment")) { //filter by event_type
-				 linebuf.append(values.get(26).toString()).append(",") 		//device_match_result
-						.append(values.get(27).toString()).append(",")		//device_result
-						.append(values.get(30).toString()).append(",")		//enabled_ck
-						.append(values.get(31).toString()).append(",")		//enabled_fl
-						.append(values.get(32).toString()).append(",")		//enabled_im
-						.append(values.get(33).toString()).append(",")		//enabled_js
-						.append(values.get(50).toString()).append(",") 		//image_loaded
-						.append(values.get(65).toString()).append(",")		//screen_res	82.3%
-						//.append(values.get(70).toString()).append(",")		//tcp_os_signature	63%
-						//.append(values.get(71).toString()).append(",")		//tcp_os_sig_raw	64%
-						//.append(values.get(72).toString()).append(",")		//tcp_tstmp_rate		26%
-						//.append(values.get(73).toString()).append(",")		//third_party_cookie	66.5%
-						.append(values.get(91).toString()).append(",")		//ua_browser	91%	
-						.append(values.get(92).toString()).append(",")		//ua_mobile		15%	
-						.append(values.get(93).toString()).append(",")		//ua_os		87%
-						//.append(values.get(94).toString()).append(",")		//ua_platform	86%
-						.append(values.get(101).toString()).append(",")		//request_duration	100%
-						.append(values.get(109).toString()).append(",")		//mime_type_number	52%
-						.append(values.get(121).toString()).append(",")		//fuzzy_device_id_confidence
-						.append(values.get(123).toString()).append(",")		//fuzzy_device_match_result
-						.append(values.get(131).toString()).append(",")		//fuzzy_device_result
-						//.append(values.get(154).toString()).append(",")		//true_ip_isp
-						.append(values.get(163).toString()).append(",")		//true_ip_score
-						.append(values.get(164).toString()).append(",")		//true_ip_worst_score
-						.append(values.get(171).toString()).append(",")		//proxy_ip
-						.append(values.get(180).toString()).append(",")		//proxy_ip_result
-						.append(values.get(181).toString()).append(",")		//proxy_ip_score
-						.append(values.get(182).toString()).append(",")		//proxy_ip_worst_score
-						.append(values.get(183).toString()).append(",")		//proxy_type
-						.append(values.get(193).toString()).append(",")		//account_name_result
-						.append(values.get(194).toString()).append(",")		//account_name_score
-						.append(values.get(195).toString()).append(",")		//account_name_worst_score
-						.append(values.get(204).toString()).append(",")		//account_login_result
-						.append(values.get(215).toString()).append(",")		//password_hash_result
-						.append(values.get(226).toString()).append(",")		//account_number_result
-						.append(values.get(272).toString()).append(",")		//account_email_result
-						.append(values.get(284).toString()).append(",")		//account_address_result	16.1%
-						.append(values.get(339).toString()).append(",")		//transaction_amount	19.7%
-						.append(values.get(342).toString()).append(",")		//transaction_currency	18.5%
-						.append(values.get(387).toString()).append(",")		//tcp_os_sig_adv_mss	63.8%
-						.append(values.get(388).toString()).append(",")		//tcp_os_sig_snd_mss	63.4%
-						.append(values.get(389).toString()).append(",")		//tcp_os_sig_rcv_mss	63.4%
-						.append(values.get(390).toString()).append(",")		//http_os_sig_adv_mss	88.2%
-						.append(values.get(391).toString()).append(",")		//http_os_sig_snd_mss	88.2%
-						.append(values.get(392).toString()).append(",")		//http_os_sig_rcv_mss	88.2%
-						.append(values.get(393).toString()).append(",")		//tcp_os_sig_ttl	63.4%
-						.append(values.get(394).toString()).append(",")		//http_os_sig_ttl	88.2%
-						.append(values.get(395).toString()).append(",")		//profiling_delta	88.2%
-						.append(values.get(396).toString()).append(",")		//profiling_site_id		88.2%
-						.append(values.get(405).toString());				//http_referer_domain_result	73%
+				 linebuf.append(lineCloumns[26]).append(",") 		//device_match_result
+						.append(lineCloumns[27]).append(",")		//device_result
+						.append(lineCloumns[30]).append(",")		//enabled_ck
+						.append(lineCloumns[31]).append(",")		//enabled_fl
+						.append(lineCloumns[32]).append(",")		//enabled_im
+						.append(lineCloumns[33]).append(",")		//enabled_js
+						.append(lineCloumns[50]).append(",") 		//image_loaded
+						.append(lineCloumns[65]).append(",")		//screen_res	82.3%
+						//.append(lineCloumns[70]).append(",")		//tcp_os_signature	63%
+						//.append(lineCloumns[71]).append(",")		//tcp_os_sig_raw	64%
+						//.append(lineCloumns[72]).append(",")		//tcp_tstmp_rate		26%
+						//.append(lineCloumns[73]).append(",")		//third_party_cookie	66.5%
+						.append(lineCloumns[91]).append(",")		//ua_browser	91%	
+						.append(lineCloumns[92]).append(",")		//ua_mobile		15%	
+						.append(lineCloumns[93]).append(",")		//ua_os		87%
+						//.append(lineCloumns[94]).append(",")		//ua_platform	86%
+						.append(lineCloumns[101]).append(",")		//request_duration	100%
+						.append(lineCloumns[109]).append(",")		//mime_type_number	52%
+						.append(lineCloumns[121]).append(",")		//fuzzy_device_id_confidence
+						.append(lineCloumns[123]).append(",")		//fuzzy_device_match_result
+						.append(lineCloumns[131]).append(",")		//fuzzy_device_result
+						//.append(lineCloumns[154]).append(",")		//true_ip_isp
+						.append(lineCloumns[163]).append(",")		//true_ip_score
+						.append(lineCloumns[164]).append(",")		//true_ip_worst_score
+						.append(lineCloumns[171]).append(",")		//proxy_ip
+						.append(lineCloumns[180]).append(",")		//proxy_ip_result
+						.append(lineCloumns[181]).append(",")		//proxy_ip_score
+						.append(lineCloumns[182]).append(",")		//proxy_ip_worst_score
+						.append(lineCloumns[183]).append(",")		//proxy_type
+						.append(lineCloumns[193]).append(",")		//account_name_result
+						.append(lineCloumns[194]).append(",")		//account_name_score
+						.append(lineCloumns[195]).append(",")		//account_name_worst_score
+						.append(lineCloumns[204]).append(",")		//account_login_result
+						.append(lineCloumns[215]).append(",")		//password_hash_result
+						.append(lineCloumns[226]).append(",")		//account_number_result
+						.append(lineCloumns[272]).append(",")		//account_email_result
+						.append(lineCloumns[284]).append(",")		//account_address_result	16.1%
+						.append(lineCloumns[339]).append(",")		//transaction_amount	19.7%
+						.append(lineCloumns[342]).append(",")		//transaction_currency	18.5%
+						.append(lineCloumns[387]).append(",")		//tcp_os_sig_adv_mss	63.8%
+						.append(lineCloumns[388]).append(",")		//tcp_os_sig_snd_mss	63.4%
+						.append(lineCloumns[389]).append(",")		//tcp_os_sig_rcv_mss	63.4%
+						.append(lineCloumns[390]).append(",")		//http_os_sig_adv_mss	88.2%
+						.append(lineCloumns[391]).append(",")		//http_os_sig_snd_mss	88.2%
+						.append(lineCloumns[392]).append(",")		//http_os_sig_rcv_mss	88.2%
+						.append(lineCloumns[393]).append(",")		//tcp_os_sig_ttl	63.4%
+						.append(lineCloumns[394]).append(",")		//http_os_sig_ttl	88.2%
+						.append(lineCloumns[395]).append(",")		//profiling_delta	88.2%
+						.append(lineCloumns[396]).append(",")		//profiling_site_id		88.2%
+						.append(lineCloumns[405]);				//http_referer_domain_result	73%
 				 		// 44 cols
 						context.write(key, new Text(linebuf.toString()));
 			}
