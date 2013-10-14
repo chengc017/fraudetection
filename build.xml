@@ -4,16 +4,20 @@
 	
 	<!-- Source code and lib dirs -->
 	<property name="src.dir" location="src"/>
+	<property name="config.dir" location="conf"/>
     <property name="lib.dir" location="lib"/>
 	
 	<!-- Ouptut dirs -->
 	<property name="build.dir" location="build/classes"/>
-	<property name="jar.dir" location="build/jar"/>
 	<property name="dist.dir" location="dist"/>
 	
 	<!-- Core source files to compile for production -->
 	<path id="src.core.folders">
 	    <dirset dir="${src.dir}" includes="*" />
+	</path> 
+	
+	<path id="src.config.folder">
+		<dirset dir="${config.dir}" includes="*" />
 	</path> 
 	
 	<path id="runtime.classpath">
@@ -34,6 +38,7 @@
     -->
     <target name="compile"  description="Compile main source tree java files">
     	<!-- compile java code -->
+    	<delete dir="${build.dir}"/>
         <mkdir dir="${build.dir}"/>
     	
         <javac destdir="${build.dir}" debug="true" optimize="false"
@@ -50,19 +55,23 @@
 	
     <target name="jar" depends="compile">
     	<delete file="${dist.dir}/fraudection.jar"/>
-    	<copy todir="${dist.dir}/fraudection/">
+    	<delete dir="${dist.dir}/fraudection/lib"/>
+    	<mkdir dir="${dist.dir}/fraudection/lib"/>
+    	<copy todir="${dist.dir}/fraudection/lib">
     		<fileset dir="${lib.dir}/">
     		</fileset>
         </copy>
+    	<copy todir="${dist.dir}/fraudection/">
+    		<fileset dir="${config.dir}"/>
+    	</copy>
     	
     	<jar destfile="${dist.dir}/fraudection.jar" compress="true">
     		<fileset dir="${build.dir}"/>
     		<fileset dir="${dist.dir}/fraudection/"/>
     		<manifest>
-    			
-    			<attribute name="Class-Path" value="nlog4j-1.2.25.jar encog-core-3.1.0-SNAPSHOT.jar csvinputformat.jar commons-logging-1.0.4.jar commons-cli-2.0-SNAPSHOT.jar jackson-mapper-asl-1.4.2.jar jackson-asl-0.9.5.jar avo-1.3.2.jar commons-httpclient-3.1.jar opencsv-2.3.jar commons-collections-3.1.jar"/>
-    		    			<attribute name="Main-Class" value="com.vormetric.fd.InMemoryEvalClient"/>
-    		    		</manifest>
+    			<attribute name="Main-Class" value="com.vormetric.fd.InMemoryEvalClient"/>
+    			<attribute name="Class-Path" value="lib/nlog4j-1.2.25.jar lib/encog-core-3.1.0-SNAPSHOT.jar lib/csvinputformat.jar lib/commons-logging-1.0.4.jar lib/commons-cli-2.0-SNAPSHOT.jar lib/jackson-mapper-asl-1.4.2.jar lib/jackson-asl-0.9.5.jar lib/avo-1.3.2.jar lib/commons-httpclient-3.1.jar lib/opencsv-2.3.jar lib/commons-collections-3.1.jar"/>
+	    	</manifest>
     	</jar>
     </target>
 	
