@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+
+<project name="fraudetection" basedir=".">
+	
+	<!-- Source code and lib dirs -->
+	<property name="src.dir" location="src"/>
+    <property name="lib.dir" location="lib"/>
+	
+	<!-- Ouptut dirs -->
+	<property name="build.dir" location="build/classes"/>
+	<property name="jar.dir" location="build/jar"/>
+	<property name="dist.dir" location="dist"/>
+	
+	<!-- Core source files to compile for production -->
+	<path id="src.core.folders">
+	    <dirset dir="${src.dir}" includes="*" />
+	</path> 
+	
+	<path id="runtime.classpath">
+        <fileset dir="${lib.dir}">
+        	<include name="*.jar"/>
+        </fileset>
+    </path>
+	
+    <path id="compile.classpath">
+        <fileset dir="${lib.dir}">
+            <include name="*.jar"/>
+        </fileset>
+    </path>
+    
+	<!-- 
+       Source compilation.
+       Compiles production the code without clover instrumentation.
+    -->
+    <target name="compile"  description="Compile main source tree java files">
+    	<!-- compile java code -->
+        <mkdir dir="${build.dir}"/>
+    	
+        <javac destdir="${build.dir}" debug="true" optimize="false"
+        	verbose="false" listfiles="false"
+            deprecation="false" failonerror="true" source="1.6" target="1.6">
+        	<src refid="src.core.folders"/>
+        	<!--This is not good, core suppose not referencing plugins folders, 
+        		should have to refactor. Delete this src and run compile task to check the refereces-->
+            <classpath>
+                <path refid="compile.classpath"/>
+            </classpath>
+        </javac>
+    </target>
+	
+    <target name="jar" depends="compile">
+    	<delete file="${dist.dir}/fraudection.jar"/>
+    	<copy todir="${dist.dir}/fraudection/">
+    		<fileset dir="${lib.dir}/">
+    		</fileset>
+        </copy>
+    	
+    	<jar destfile="${dist.dir}/fraudection.jar" compress="true">
+    		<fileset dir="${build.dir}"/>
+    		<fileset dir="${dist.dir}/fraudection/"/>
+    		<manifest>
+    			
+    			<attribute name="Class-Path" value="nlog4j-1.2.25.jar encog-core-3.1.0-SNAPSHOT.jar csvinputformat.jar commons-logging-1.0.4.jar commons-cli-2.0-SNAPSHOT.jar jackson-mapper-asl-1.4.2.jar jackson-asl-0.9.5.jar avo-1.3.2.jar commons-httpclient-3.1.jar opencsv-2.3.jar commons-collections-3.1.jar"/>
+    		    			<attribute name="Main-Class" value="com.vormetric.fd.InMemoryEvalClient"/>
+    		    		</manifest>
+    	</jar>
+    </target>
+	
+	<!-- 
+       Output cleanup.
+    -->
+	<target name="clean">
+		<delete file="${dist.dir}/**"/>	
+	</target>
+	
+	<target name="all" depends="clean">
+		
+	</target>
+</project>
