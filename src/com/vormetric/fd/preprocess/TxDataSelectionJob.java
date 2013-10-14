@@ -127,8 +127,8 @@ public class TxDataSelectionJob extends Configured implements Tool {
 		protected void map(LongWritable key, Text value, Context context)
 			throws IOException, InterruptedException {
 			String [] lineCloumns = value.toString().split(",");
-			if(lineCloumns.length < 405) {
-				logger.info("######## Filter out invalid line that has " + lineCloumns.length + " clomuns only.");
+			if(lineCloumns.length < 410) {
+				logger.info("######## Filter out invalid line that has only " + lineCloumns.length + " clomuns.");
 				return;
 			}
 			String eventType = lineCloumns[4].toString();
@@ -155,7 +155,6 @@ public class TxDataSelectionJob extends Configured implements Tool {
 						.append(lineCloumns[121]).append(",")		//fuzzy_device_id_confidence
 						.append(lineCloumns[123]).append(",")		//fuzzy_device_match_result
 						.append(lineCloumns[131]).append(",")		//fuzzy_device_result
-						//.append(lineCloumns[154]).append(",")		//true_ip_isp
 						.append(lineCloumns[163]).append(",")		//true_ip_score
 						.append(lineCloumns[164]).append(",")		//true_ip_worst_score
 						.append(lineCloumns[171]).append(",")		//proxy_ip
