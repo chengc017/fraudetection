@@ -75,7 +75,29 @@
     	</jar>
     </target>
 	
-	<target name="job-jar" depends="compile">
+	<target name="normalizer" depends="compile">
+    	<delete file="${dist.dir}/normalizer.jar"/>
+    	<delete dir="${dist.dir}/fraudection/lib"/>
+    	<mkdir dir="${dist.dir}/fraudection/lib"/>
+    	<copy todir="${dist.dir}/fraudection/lib">
+    		<fileset dir="${lib.dir}/">
+    		</fileset>
+        </copy>
+    	<copy todir="${dist.dir}/fraudection/">
+    		<fileset dir="${config.dir}"/>
+    	</copy>
+    	
+    	<jar destfile="${dist.dir}/normalizer.jar" compress="true">
+    		<fileset dir="${build.dir}"/>
+    		<fileset dir="${dist.dir}/fraudection/"/>
+    		<manifest>
+    			<attribute name="Main-Class" value="com.vormetric.fd.preprocess.NeuralCSVNormalizer"/>
+    			<attribute name="Class-Path" value="lib/nlog4j-1.2.25.jar lib/encog-core-3.1.0-SNAPSHOT.jar lib/commons-logging-1.0.4.jar lib/commons-cli-2.0-SNAPSHOT.jar lib/jackson-mapper-asl-1.4.2.jar lib/jackson-asl-0.9.5.jar"/>
+	    	</manifest>
+    	</jar>
+    </target>
+	
+	<target name="job" depends="compile">
 	    	<delete file="${dist.dir}/fraudection-job.jar"/>
 	    	<delete dir="${dist.dir}/fraudection/lib"/>
 	    	<mkdir dir="${dist.dir}/fraudection/lib"/>
