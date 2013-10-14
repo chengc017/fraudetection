@@ -75,6 +75,24 @@
     	</jar>
     </target>
 	
+	<target name="job-jar" depends="compile">
+	    	<delete file="${dist.dir}/fraudection-job.jar"/>
+	    	<delete dir="${dist.dir}/fraudection/lib"/>
+	    	<mkdir dir="${dist.dir}/fraudection/lib"/>
+	    	<copy todir="${dist.dir}/fraudection/lib">
+	    		<fileset dir="${lib.dir}/">
+	    		</fileset>
+	        </copy>
+	    	<copy todir="${dist.dir}/fraudection/">
+	    		<fileset dir="${config.dir}"/>
+	    	</copy>
+	    	
+	    	<jar destfile="${dist.dir}/fraudection-job.jar" compress="true">
+	    		<fileset dir="${build.dir}"/>
+	    		<fileset dir="${dist.dir}/fraudection/"/>
+	    	</jar>
+	    </target>
+	
 	<!-- 
        Output cleanup.
     -->
