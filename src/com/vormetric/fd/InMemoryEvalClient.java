@@ -108,7 +108,7 @@ public class InMemoryEvalClient {
 				somCluster.put(cluster, lst);
 			}
 			i++;
-		}
+		} 
 		
 		//evaluate result
 		logger.info("clustering finished, ready to evaluate result.");
@@ -128,13 +128,14 @@ public class InMemoryEvalClient {
 		logger.info("finding nearest clusters.");
 		for(Entry<Integer, List<Integer>> entrySet : somCluster.entrySet()) {
 			List<Integer> array = entrySet.getValue();
-			int nearest = 0;
+			double nearest = 0;
 			int nearestIndex = 0;
 			for(Entry<Integer, List<Integer>> entrySet2 : supervisedCluster.entrySet()) {
 				List<Integer> target = entrySet2.getValue();
 				Collection union = CollectionUtils.intersection(array, target);
-				if(union.size() > nearest) {
-					nearest = union.size();
+				double distance = nearest((double)union.size(), (double)array.size(), (double)target.size());
+				if(distance > nearest) {
+					nearest = distance;
 					nearestIndex = entrySet2.getKey();
 				}
 			}
@@ -154,6 +155,9 @@ public class InMemoryEvalClient {
 		}		
 	}
 	
+	private double nearest(double unionSize, double leftSize, double rightSize) {
+		return 1-Math.log10(Math.abs(leftSize-rightSize)/leftSize)*unionSize;
+	}
 	 
 
 	/**
