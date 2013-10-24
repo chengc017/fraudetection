@@ -1,0 +1,73 @@
+;package vormetric;
+
+option java_package="com.vormetric.device.proto";
+option java_outer_classname="DeviceProto";
+
+message Device {
+	optional string org_id=1;
+	optional string event_id=2;
+	optional string request_id=3;
+	optional string device_match_result=4;
+	optional string session_id=5;
+	 
+	message Browser {
+		optional string browser_language=1;
+		optional string browser_string=2;
+		optional string browser_string_hash=3;
+		optional string css_image_loaded=4;
+		optional string detected_fl=5;
+		optional string enabled_ck=6;
+		optional string enabled_fl=7;
+		optional string enabled_im=8;
+		optional string enabled_js=9;
+		optional string flash_guid=10;
+		optional string flash_lang=11;
+		optional string flash_os=12;
+		optional string flash_version=13;
+		optional string image_loaded=14;
+	}
+	optional Browser browser=6;
+	
+	message Plugin {
+		optional string plugin_adobe_acrobat=1;
+		optional string plugin_flash=2;
+		optional plugin_hash=3;
+		optional plugin_silverlight=4;
+		optional plugin_number=5;
+		optional plugin_quicktime=6;
+		optional plugin_java=7;
+		optional plugin_vlc_player=8;
+	}
+	optional Plugin plugin=7;
+	
+	message OS {
+		optional string os=1;
+		optional string os_fonts_hash=2;
+		optional string os_fonts_number=3;
+		optional string screen_res=4;
+		optional string time_zone=5;
+		optional string ua_browser=6;
+		optional string ua_mobile=7;
+		optional string ua_os=8;
+		optional string ua_platform=9;
+		optional string time_zone_dst_offset=10;
+	}
+	optional OS os=8;
+	
+	message Connection {
+		optional string true_ip_city=1;
+		optional string true_ip_geo=2;
+		optional string true_ip=3;
+		optional string true_ip_isp=4;
+		optional string true_ip_region=5;
+		optional string profiling_site_id=6;
+		optional string tcp_connection_type=7;
+		optional string http_connection_type=8;
+		optional string screen_res_alt=9;
+		optional string http_os_signature=10;
+		optional string http_os_sig_raw=11;
+		optional string tcp_os_signature=12;
+		optional string tcp_os_sig_raw=13;
+	}
+	optional Connection connection=9;
+}
