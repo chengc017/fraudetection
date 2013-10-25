@@ -101,7 +101,7 @@ public class DeviceSimilarityJob extends Configured implements Tool {
 	public static void main(String[] args) {
 		int res = -1;
 		try {
-			logger.info("Initializing Transaction Data Selection Job");
+			logger.info("Initializing Device Similarity Job");
 			DeviceSimilarityJob deviceSimilarity = new DeviceSimilarityJob();
 
 			// Let ToolRunner handle generic command-line options and run hadoop
@@ -154,7 +154,6 @@ public class DeviceSimilarityJob extends Configured implements Tool {
 						System.out.println(score + ":\n------------------------------------\n" + deviceX.toString() 
 							+ "\n"+ deviceY.toString()
 							+ "\n-------------------------------------------\n");
-					
 				}
 			}
 		}

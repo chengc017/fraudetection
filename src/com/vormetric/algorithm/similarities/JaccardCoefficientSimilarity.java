@@ -12,7 +12,7 @@ import java.util.Set;
  * @author shawnkuo
  *
  */
-public class JaccardCoefficientSimilarity {
+public class JaccardCoefficientSimilarity implements Similarity{
 	
 	public JaccardCoefficientSimilarity() {
 		
