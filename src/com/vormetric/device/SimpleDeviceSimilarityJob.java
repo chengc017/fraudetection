@@ -36,9 +36,9 @@ import com.vormetric.device.extract.DeviceAttributeExtractor;
  * @author shawnkuo
  *
  */
-public class DeviceSimilarityJob extends Configured implements Tool {
+public class SimpleDeviceSimilarityJob extends Configured implements Tool {
 
-	public static final Log logger = LogFactory.getLog(DeviceSimilarityJob.class);
+	public static final Log logger = LogFactory.getLog(SimpleDeviceSimilarityJob.class);
 	
 	/* (non-Javadoc)
 	 * @see org.apache.hadoop.util.Tool#run(java.lang.String[])
@@ -71,7 +71,7 @@ public class DeviceSimilarityJob extends Configured implements Tool {
 		
 		Job job = new Job(conf);
 		job.setJobName("Device Similarity");
-		job.setJarByClass(DeviceSimilarityJob.class);
+		job.setJarByClass(SimpleDeviceSimilarityJob.class);
 		
 		job.setInputFormatClass(CSVTextInputFormat.class);
 		job.setOutputFormatClass(TextOutputFormat.class);
@@ -102,7 +102,7 @@ public class DeviceSimilarityJob extends Configured implements Tool {
 		int res = -1;
 		try {
 			logger.info("Initializing Device Similarity Job");
-			DeviceSimilarityJob deviceSimilarity = new DeviceSimilarityJob();
+			SimpleDeviceSimilarityJob deviceSimilarity = new SimpleDeviceSimilarityJob();
 
 			// Let ToolRunner handle generic command-line options and run hadoop
 			res = ToolRunner.run(new Configuration(), deviceSimilarity, args);

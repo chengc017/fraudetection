@@ -4,9 +4,10 @@
 package com.vormetric.device;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Vector;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,9 +37,9 @@ import com.vormetric.device.model.DeviceModel;
  * @author xioguo
  *
  */
-public class DeviceSimilaritySVMTrainner extends Configured implements Tool {
+public class SVMDeviceSimilarityTrainningJob extends Configured implements Tool {
 
-	public static final Log logger = LogFactory.getLog(DeviceSimilaritySVMTrainner.class);
+	public static final Log logger = LogFactory.getLog(SVMDeviceSimilarityTrainningJob.class);
 	
 	/* (non-Javadoc)
 	 * @see org.apache.hadoop.util.Tool#run(java.lang.String[])
@@ -71,7 +72,7 @@ public class DeviceSimilaritySVMTrainner extends Configured implements Tool {
 		
 		Job job = new Job(conf);
 		job.setJobName("Device Similarity SVM Trainner");
-		job.setJarByClass(DeviceSimilaritySVMTrainner.class);
+		job.setJarByClass(SVMDeviceSimilarityTrainningJob.class);
 		
 		job.setInputFormatClass(CSVTextInputFormat.class);
 		job.setOutputFormatClass(TextOutputFormat.class);
@@ -80,8 +81,8 @@ public class DeviceSimilaritySVMTrainner extends Configured implements Tool {
 		job.setOutputKeyClass(Text.class);  		
 		job.setOutputValueClass(DeviceModel.class); 
 		
-		job.setMapperClass(DeviceSimilaritySVMMapper.class);
-		job.setReducerClass(DeviceSimilaritySVMReducer.class);
+		job.setMapperClass(SVMDeviceSimilarityTrainningMapper.class);
+		job.setReducerClass(SVMDeviceSimilarityTrainningReducer.class);
 		job.setNumReduceTasks(2);
 		
 		SequenceFileInputFormat.addInputPath(job, in);
@@ -103,7 +104,7 @@ public class DeviceSimilaritySVMTrainner extends Configured implements Tool {
 		int res = -1;
 		try {
 			logger.info("Initializing Device Similarity SVM Trainning Job");
-			DeviceSimilaritySVMTrainner deviceSimilarity = new DeviceSimilaritySVMTrainner();
+			SVMDeviceSimilarityTrainningJob deviceSimilarity = new SVMDeviceSimilarityTrainningJob();
 
 			// Let ToolRunner handle generic command-line options and run hadoop
 			res = ToolRunner.run(new Configuration(), deviceSimilarity, args);
@@ -118,12 +119,12 @@ public class DeviceSimilaritySVMTrainner extends Configured implements Tool {
 		}
 	} 
 
-	public static class DeviceSimilaritySVMMapper extends
+	public static class SVMDeviceSimilarityTrainningMapper extends
 		Mapper<LongWritable, List<Text>, Text, DeviceModel> {
-		public static final Log logger = LogFactory.getLog(DeviceSimilaritySVMMapper.class);
+		public static final Log logger = LogFactory.getLog(SVMDeviceSimilarityTrainningMapper.class);
 		protected void map(LongWritable key, List<Text> values, Context context)
 			throws IOException, InterruptedException { 
-			if(values.size() < 450) {
+			if(values.size() < 450 || values.get(13).equals("")) {
 				logger.info("######## Filter out Map Input values which has only :" + values.size() + " columns.");
 				return;
 			}
@@ -134,48 +135,67 @@ public class DeviceSimilaritySVMTrainner extends Configured implements Tool {
 		
 	}
 	
-	public static class DeviceSimilaritySVMReducer extends Reducer<Text, DeviceModel, NullWritable, Text> {
+	public static class SVMDeviceSimilarityTrainningReducer extends Reducer<Text, DeviceModel, NullWritable, Text> {
 		private JaccardCoefficientSimilarity similarity = new JaccardCoefficientSimilarity();
 		protected void reduce(Text key, Iterable<DeviceModel> values, Context context)
 			throws IOException, InterruptedException {
-			List<DeviceModel> lst = new ArrayList<DeviceModel> ();
+			Vector<DeviceModel> v = new Vector<DeviceModel> ();
 			Iterator<DeviceModel> ite = values.iterator();
 			while(ite.hasNext()) {
-				DeviceModel dm = ite.next();
-				lst.add(dm);
+				DeviceModel item = ite.next();
+				DeviceModel dm = new DeviceModel(item.getOrgId(),
+						item.getEventId(), item.getRequestId(),
+						item.getDeviceMatchResult(), item.getSessionId());
+				dm.setBrowserAttributes(item.getBrowserAttributes());
+				dm.setPluginAttributes(item.getPluginAttributes());
+				dm.setOsAttributes(item.getOsAttributes());
+				dm.setConnectionAttributes(item.getConnectionAttributes());
+				v.add(dm);
 			}
 			
-			for (int i = 0; i < lst.size(); i++) {    
-				DeviceModel dmX = lst.get(i);
+			for (int i = 0; i < v.size(); i++) {    
+				DeviceModel dmX = (DeviceModel)v.get(i);
 				
 				int nextIndex = i + 1;
-				for (int j = 0; j < lst.size() - nextIndex; j++) {
-					DeviceModel dmY = lst.get(j+nextIndex);
+				for (int j = 0; j < v.size() - nextIndex; j++) {
+					DeviceModel dmY = (DeviceModel)v.get(j+nextIndex);
 					double score = similarity.similarity(dmX.all(), dmY.all());
-					double score_ba = similarity.similarity(dmX.getBrowserAttributes(), dmY.getBrowserAttributes());
-					double score_pa = similarity.similarity(dmX.getPluginAttributes(), dmY.getPluginAttributes());
-					double score_oa = similarity.similarity(dmX.getOsAttributes(), dmY.getOsAttributes());
-					double score_ca = similarity.similarity(dmX.getConnectionAttributes(), dmY.getConnectionAttributes());
+					double score_ba = similarity.similarity(
+							convert(dmX.getBrowserAttributes()),
+							convert(dmY.getBrowserAttributes()));
+					double score_pa = similarity.similarity(
+							convert(dmX.getPluginAttributes()),
+							convert(dmY.getPluginAttributes()));
+					double score_oa = similarity.similarity(
+							convert(dmX.getOsAttributes()),
+							convert(dmY.getOsAttributes()));
+					double score_ca = similarity.similarity(
+							convert(dmX.getConnectionAttributes()),
+							convert(dmY.getConnectionAttributes()));
+
+					if(score <=0.8 && score >= 0.5) {
+						String scoresLine = score + "[browser:"
+								+ score_ba + " | plugin:"
+								+ score_pa + " | os:"
+								+ score_oa + " | connection:"
+								+ score_ca + "],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,";
+						String deviceXLine = dmX.toString().replaceAll("\\[|\\]", "");
+						String deviceYLine = dmY.toString().replaceAll("\\[|\\]", "") ;
+						context.write(NullWritable.get(), new Text(scoresLine));
+						context.write(NullWritable.get(), new Text(deviceXLine));
+						context.write(NullWritable.get(), new Text(deviceYLine));
+					}
 					
-					//if(score <0.9 && score > 0.7)
-						System.out
-								.println(score
-										+ "[browser:"
-										+ score_ba
-										+ " | plugin:"
-										+ score_pa
-										+ " | os:"
-										+ score_oa
-										+ " | connection:"
-										+ score_ca
-										+ "]"
-										+ ":\n------------------------------------\n"
-										+ dmX.toString()
-										+ "\n"
-										+ dmY.toString()
-										+ "\n-------------------------------------------\n");
 				}
 			}
+		}
+		
+		private List<String> convert(List<Text> list) {
+			List<String> strList = new LinkedList<String> ();
+			for(Text item:list) {
+				strList.add(item.toString());
+			}
+			return strList;
 		}
 	}
 }

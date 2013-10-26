@@ -6,14 +6,16 @@ package com.vormetric.device.model;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.GenericWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+
+import com.vormetric.mapred.io.ArrayListWritable;
 
 /**
  * @author xioguo
@@ -31,24 +33,24 @@ public class DeviceModel extends GenericWritable {
 	
 	private String sessionId;
 	
-	private ArrayWritable browserAttributes;
+	private ArrayListWritable<Text> browserAttributes;
 	
-	private ArrayWritable pluginAttributes;
+	private ArrayListWritable<Text> pluginAttributes;
 	
-	private ArrayWritable osAttributes;
+	private ArrayListWritable<Text> osAttributes;
 	
-	private ArrayWritable connectionAttributes;
+	private ArrayListWritable<Text> connectionAttributes;
 	
 	private static Class [] CLASSES = {
 		Text.class,
-		ArrayWritable.class
+		ArrayListWritable.class
 	};
 	
 	public DeviceModel () {
-		browserAttributes = new ArrayWritable(Text.class);
-		pluginAttributes = new ArrayWritable(Text.class);
-		osAttributes = new ArrayWritable(Text.class);
-		connectionAttributes = new ArrayWritable (Text.class);
+		browserAttributes = new ArrayListWritable<Text> (); 
+		pluginAttributes = new ArrayListWritable<Text> ();
+		osAttributes = new ArrayListWritable<Text> ();
+		connectionAttributes = new ArrayListWritable<Text> ();
 	}
 	
 	public DeviceModel(String orgId, String eventId, String requestId,
@@ -101,53 +103,64 @@ public class DeviceModel extends GenericWritable {
 		this.sessionId = sessionId;
 	}
 	
-
-	public List<String> getBrowserAttributes() {
-		String [] values = browserAttributes.toStrings();
-		return Arrays.asList(values);
+	public List<Text> getBrowserAttributes() {
+//		Text [] values = new Text[browserAttributes.size()]; 
+//		List<Text> list = Arrays.asList(browserAttributes.toArray(values));
+//		return convert(list);
+		return browserAttributes;
 	}
 
-	public void setBrowserAttributes(List<String> browserAttributes) {
-		String [] values = new String [browserAttributes.size()]; 
-		this.browserAttributes = new ArrayWritable(browserAttributes.toArray(values));
+	public void setBrowserAttributes(List<Text> browserAttributes) {
+		this.browserAttributes = new ArrayListWritable<Text>(browserAttributes);
 	}
 
-	public List<String> getPluginAttributes() {
-		String [] values = pluginAttributes.toStrings();
-		return Arrays.asList(values);
+	public List<Text> getPluginAttributes() {
+//		Text [] values = new Text[pluginAttributes.size()];
+//		List<Text> list = Arrays.asList(pluginAttributes.toArray(values));
+//		return convert(list);
+		return pluginAttributes;
 	}
 
-	public void setPluginAttributes(List<String> pluginAttributes) {
-		String [] values = new String [pluginAttributes.size()];
-		this.pluginAttributes = new ArrayWritable(pluginAttributes.toArray(values));
+	public void setPluginAttributes(List<Text> pluginAttributes) {
+		this.pluginAttributes = new ArrayListWritable<Text>(pluginAttributes);
 	}
 
-	public List<String> getOsAttributes() {
-		String [] values = osAttributes.toStrings();
-		return Arrays.asList(values);
+	public List<Text> getOsAttributes() {
+//		Text [] values = new Text[osAttributes.size()];
+//		List<Text> list = Arrays.asList(osAttributes.toArray(values));
+//		return convert(list);
+		return osAttributes;
 	}
 
-	public void setOsAttributes(List<String> osAttributes) {
-		String [] values = new String [osAttributes.size()];
-		this.osAttributes = new ArrayWritable(osAttributes.toArray(values));
+	public void setOsAttributes(List<Text> osAttributes) {
+		this.osAttributes = new ArrayListWritable<Text>(osAttributes);
 	}
 
-	public List<String> getConnectionAttributes() {
-		String [] values = connectionAttributes.toStrings();
-		return Arrays.asList(values);
+	public List<Text> getConnectionAttributes() {
+//		Text [] values = new Text[connectionAttributes.size()];
+//		List<Text> list = Arrays.asList(connectionAttributes.toArray(values));
+//		return convert(list);
+		return connectionAttributes;
 	}
 
-	public void setConnectionAttributes(List<String> connectionAttributes) {
-		String [] values = new String[connectionAttributes.size()];
-		this.connectionAttributes = new ArrayWritable(connectionAttributes.toArray(values));
+	public void setConnectionAttributes(List<Text> connectionAttributes) {
+		this.connectionAttributes = new ArrayListWritable<Text>(connectionAttributes);
+	}
+	
+	private List<String> convert(List<Text> list) {
+		List<String> strList = new LinkedList<String> ();
+		for(Text item:list) {
+			strList.add(item.toString());
+		}
+		return strList;
 	}
 	
 	public List<String> all() {
 		List<String> allAtt = new LinkedList<String>();
-		allAtt.addAll(Arrays.asList(browserAttributes.toStrings()));
-		allAtt.addAll(Arrays.asList(pluginAttributes.toStrings()));
-		allAtt.addAll(Arrays.asList(osAttributes.toStrings()));
-		allAtt.addAll(Arrays.asList(connectionAttributes.toStrings()));
+		allAtt.addAll(convert(browserAttributes.subList(0, browserAttributes.size())));
+		allAtt.addAll(convert(pluginAttributes.subList(0, pluginAttributes.size())));
+		allAtt.addAll(convert(osAttributes.subList(0, osAttributes.size())));
+		allAtt.addAll(convert(connectionAttributes.subList(0, connectionAttributes.size())));
 		return allAtt;
 	}
 
@@ -162,25 +175,10 @@ public class DeviceModel extends GenericWritable {
 		deviceMatchResult = in.readUTF();
 		sessionId = in.readUTF();
 		
-		int size = in.readInt();
-		for(int i=0; i<size; i++) {
-			browserAttributes.readFields(in);
-		}
-		
-		size = in.readInt();
-		for(int i=0; i<size; i++) {
-			pluginAttributes.readFields(in);
-		}
-		
-		size = in.readInt();
-		for(int i=0; i<size; i++) {
-			osAttributes.readFields(in);
-		}
-		
-		size = in.readInt();
-		for(int i=0; i<size; i++) {
-			connectionAttributes.readFields(in);
-		}
+		browserAttributes.readFields(in);
+		pluginAttributes.readFields(in);
+		osAttributes.readFields(in);
+		connectionAttributes.readFields(in);
 		return;
 	}
 
@@ -221,7 +219,7 @@ public class DeviceModel extends GenericWritable {
 	
 	public String toString() {
 		return orgId + "," + eventId + "," + requestId + ","
-				+ deviceMatchResult + "," + all().toString();
+				+ deviceMatchResult + all().toString();
 	}
 	
 	@Override
