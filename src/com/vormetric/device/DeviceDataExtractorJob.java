@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.vormetric.device.extract;
+package com.vormetric.device;
 
 import java.io.IOException;
 import java.util.List;
@@ -28,6 +28,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import com.twitter.elephantbird.mapreduce.io.ProtobufWritable;
+import com.vormetric.device.extract.DeviceAttributeExtractor;
 import com.vormetric.device.proto.DeviceProto.Device;
 import com.vormetric.fd.preprocess.TxDataSelectionJob.TxDataSelectionMapper;
 import com.vormetric.mapred.io.ProtobufDeviceWritable;
