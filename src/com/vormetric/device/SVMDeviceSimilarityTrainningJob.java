@@ -13,19 +13,24 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.mapreduce.TableOutputFormat;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.CSVLineRecordReader;
 import org.apache.hadoop.mapreduce.lib.input.CSVTextInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -41,20 +46,33 @@ public class SVMDeviceSimilarityTrainningJob extends Configured implements Tool 
 
 	public static final Log logger = LogFactory.getLog(SVMDeviceSimilarityTrainningJob.class);
 	
+	public static final String TABLENAME = "dd";
+	
 	/* (non-Javadoc)
 	 * @see org.apache.hadoop.util.Tool#run(java.lang.String[])
 	 */
 	@Override
 	public int run(String[] args) throws Exception {
-		if(args.length < 2) {
+		if(args.length < 1) {
 			System.out.println("Need input and output path to process the job");
 			return 0;
 		}
 		
 		Path in = new Path(args[0]);
-		Path out = new Path(args[1]);
 		
-		Configuration conf = getConf();
+		Configuration conf = HBaseConfiguration.create();
+		conf.set("hbase.zookeeper.quorum", "localhost");
+		
+		HBaseAdmin admin = new HBaseAdmin(conf);
+		// if table dose not exist, create one now.
+		if(!admin.tableExists(TABLENAME)) {
+			logger.info("creating training table...");
+			boolean created = createTable(admin);
+			if(!created) return 0;
+		}
+		conf.set(TableOutputFormat.OUTPUT_TABLE, TABLENAME);
+		
+		//Configuration conf = getConf();
 		// Performance tuning
 		//2. reusing the JVM
 		conf.setInt("mapred.job.reuse.jvm.num.tasks", 3);
@@ -65,17 +83,14 @@ public class SVMDeviceSimilarityTrainningJob extends Configured implements Tool 
 		//
 		conf.setBoolean("mapred.input.dir.recursive", true);
 		
-		FileSystem fs = FileSystem.get(conf);
-		if(fs.exists(out)) {
-			fs.delete(out, true);
-		}
-		
 		Job job = new Job(conf);
 		job.setJobName("Device Similarity SVM Trainner");
 		job.setJarByClass(SVMDeviceSimilarityTrainningJob.class);
 		
+		//map's input format
 		job.setInputFormatClass(CSVTextInputFormat.class);
-		job.setOutputFormatClass(TextOutputFormat.class);
+		//reduce's output format
+		job.setOutputFormatClass(TableOutputFormat.class);
 		
 		// map's output
 		job.setOutputKeyClass(Text.class);  		
@@ -86,7 +101,7 @@ public class SVMDeviceSimilarityTrainningJob extends Configured implements Tool 
 		job.setNumReduceTasks(2);
 		
 		SequenceFileInputFormat.addInputPath(job, in);
-		FileOutputFormat.setOutputPath(job, out);
+		//FileOutputFormat.setOutputPath(job, out);
 		
 		if (job.waitForCompletion(true)) {
 			if (logger.isInfoEnabled()) {
@@ -95,6 +110,27 @@ public class SVMDeviceSimilarityTrainningJob extends Configured implements Tool 
 			return 1;
 		}
 		return 0;
+	}
+	
+	private boolean createTable(HBaseAdmin admin) throws IOException {
+		HTableDescriptor htd = new HTableDescriptor(TABLENAME);
+		htd.addFamily(new HColumnDescriptor("h"));
+		htd.addFamily(new HColumnDescriptor("t"));
+		htd.addFamily(new HColumnDescriptor("s"));
+		htd.addFamily(new HColumnDescriptor("d"));
+		admin.createTable(htd);
+		byte [] tablename = htd.getName();
+		HTableDescriptor [] tables = admin.listTables();
+		boolean result = false;
+		int i=0;
+		for(HTableDescriptor table : tables) {
+			if(tables.length != 1 && Bytes.equals(tablename, tables[i++].getName())) {
+				logger.info("Failed create of table.");
+			} else {
+				result = true;
+			}
+		}
+		return result;
 	}
 
 	/**
@@ -133,9 +169,9 @@ public class SVMDeviceSimilarityTrainningJob extends Configured implements Tool 
 			context.write(new Text(browserStringHash), device);
 		}
 		
-	}
+	} 
 	
-	public static class SVMDeviceSimilarityTrainningReducer extends Reducer<Text, DeviceModel, NullWritable, Text> {
+	public static class SVMDeviceSimilarityTrainningReducer extends Reducer<Text, DeviceModel, NullWritable, Writable> {
 		private JaccardCoefficientSimilarity similarity = new JaccardCoefficientSimilarity();
 		protected void reduce(Text key, Iterable<DeviceModel> values, Context context)
 			throws IOException, InterruptedException {
@@ -174,18 +210,51 @@ public class SVMDeviceSimilarityTrainningJob extends Configured implements Tool 
 							convert(dmY.getConnectionAttributes()));
 
 					if(score <=0.8 && score >= 0.5) {
-						String scoresLine = score + "[browser:"
-								+ score_ba + " | plugin:"
-								+ score_pa + " | os:"
-								+ score_oa + " | connection:"
-								+ score_ca + "],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,";
-						String deviceXLine = dmX.toString().replaceAll("\\[|\\]", "");
-						String deviceYLine = dmY.toString().replaceAll("\\[|\\]", "") ;
-						context.write(NullWritable.get(), new Text(scoresLine));
-						context.write(NullWritable.get(), new Text(deviceXLine));
-						context.write(NullWritable.get(), new Text(deviceYLine));
+						byte [] rowID = Bytes.toBytes(String.valueOf(System.currentTimeMillis()));
+						Put put = new Put(rowID);
+						
+						byte [] family = Bytes.toBytes("h");
+						byte [] qualifier = Bytes.toBytes("string");
+						byte [] value = Bytes.toBytes(key.toString());
+						put.add(family, qualifier, value);
+						
+						family = Bytes.toBytes("t");
+						qualifier = Bytes.toBytes("val");
+						value = Bytes.toBytes(score >= 0.7 ? 1 : 0);
+						put.add(family, qualifier, value);
+						
+						family = Bytes.toBytes("s");
+						qualifier = Bytes.toBytes("total");
+						value = Bytes.toBytes(score);
+						put.add(family, qualifier, value);
+						
+						qualifier = Bytes.toBytes("browser");
+						value = Bytes.toBytes(score_ba);
+						put.add(family, qualifier, value);
+						
+						qualifier = Bytes.toBytes("plugin");
+						value = Bytes.toBytes(score_pa);
+						put.add(family, qualifier, value);
+						
+						qualifier = Bytes.toBytes("os");
+						value = Bytes.toBytes(score_oa);
+						put.add(family, qualifier, value);
+						
+						qualifier = Bytes.toBytes("conn");
+						value = Bytes.toBytes(score_ca);
+						put.add(family, qualifier, value);
+						
+						family = Bytes.toBytes("d");
+						qualifier = Bytes.toBytes("X");
+						value = Bytes.toBytes(dmX.toString().replaceAll("\\[|\\]", ""));
+						put.add(family, qualifier, value);
+						
+						qualifier = Bytes.toBytes("Y");
+						value = Bytes.toBytes(dmY.toString().replaceAll("\\[|\\]", ""));
+						put.add(family, qualifier, value);
+						
+						context.write(NullWritable.get(), put);
 					}
-					
 				}
 			}
 		}
