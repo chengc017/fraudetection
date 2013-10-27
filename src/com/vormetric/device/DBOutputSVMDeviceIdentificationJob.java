@@ -5,7 +5,6 @@ package com.vormetric.device;
 
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Vector;
 
@@ -34,19 +33,22 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+import com.vormetric.algorithm.DIHelper;
+import com.vormetric.algorithm.decision.SVMDeviceSimilarityDecision;
 import com.vormetric.algorithm.similarities.JaccardCoefficientSimilarity;
 import com.vormetric.device.extract.DeviceAttributeExtractor;
 import com.vormetric.device.model.DeviceModel;
 
 /**
- * @author xioguo
+ * @author shawnkuo
  *
  */
-public class DBOutputDeviceSVMTrainingJob extends Configured implements Tool {
+public class DBOutputSVMDeviceIdentificationJob extends Configured implements
+		Tool {
 
-	public static final Log logger = LogFactory.getLog(DBOutputDeviceSVMTrainingJob.class);
+	public static final Log logger = LogFactory.getLog(DBOutputSVMDeviceIdentificationJob.class);
 	
-	public static final String TABLENAME = "dd";
+	public static final String TABLENAME = "devices";
 	
 	/**
 	 * @param args
@@ -54,13 +56,13 @@ public class DBOutputDeviceSVMTrainingJob extends Configured implements Tool {
 	public static void main(String[] args) {
 		int res = -1;
 		try {
-			logger.info("Initializing Device Similarity SVM Trainning Job");
-			DBOutputDeviceSVMTrainingJob deviceSimilarity = new DBOutputDeviceSVMTrainingJob();
+			logger.info("Initializing SVM Device Identification Job");
+			DBOutputSVMDeviceIdentificationJob deviceIdentification = new DBOutputSVMDeviceIdentificationJob();
 
 			// Let ToolRunner handle generic command-line options and run hadoop
-			res = ToolRunner.run(new Configuration(), deviceSimilarity, args);
+			res = ToolRunner.run(new Configuration(), deviceIdentification, args);
 			System.exit(res);
-			logger.info("Device Similarity finished running hadoop");
+			logger.info("SVM Device Identification finished running hadoop");
 
 		} catch (Throwable e) {
 			e.printStackTrace();
@@ -70,6 +72,7 @@ public class DBOutputDeviceSVMTrainingJob extends Configured implements Tool {
 		}
 	} 
 
+	
 	/* (non-Javadoc)
 	 * @see org.apache.hadoop.util.Tool#run(java.lang.String[])
 	 */
@@ -107,7 +110,7 @@ public class DBOutputDeviceSVMTrainingJob extends Configured implements Tool {
 		
 		Job job = new Job(conf);
 		job.setJobName("Device Similarity SVM Trainner");
-		job.setJarByClass(DBOutputDeviceSVMTrainingJob.class);
+		job.setJarByClass(DBOutputSVMDeviceIdentificationJob.class);
 		
 		//map's input format
 		job.setInputFormatClass(CSVTextInputFormat.class);
@@ -118,8 +121,8 @@ public class DBOutputDeviceSVMTrainingJob extends Configured implements Tool {
 		job.setOutputKeyClass(Text.class);  		
 		job.setOutputValueClass(DeviceModel.class); 
 		
-		job.setMapperClass(DBOutputDeviceSVMTrainingMapper.class);
-		job.setReducerClass(DBOutputDeviceSVMTrainingReducer.class);
+		job.setMapperClass(DBOutputSVMDeviceIdentificationMapper.class);
+		job.setReducerClass(DBOutputSVMDeviceIdentificationReducer.class);
 		job.setNumReduceTasks(2);
 		
 		SequenceFileInputFormat.addInputPath(job, in);
@@ -133,13 +136,12 @@ public class DBOutputDeviceSVMTrainingJob extends Configured implements Tool {
 		}
 		return 0;
 	}
-	
+
 	private boolean createTable(HBaseAdmin admin) throws IOException {
 		HTableDescriptor htd = new HTableDescriptor(TABLENAME);
-		htd.addFamily(new HColumnDescriptor("h"));
-		htd.addFamily(new HColumnDescriptor("t"));
-		htd.addFamily(new HColumnDescriptor("s"));
-		htd.addFamily(new HColumnDescriptor("d"));
+		htd.addFamily(new HColumnDescriptor("h")); //browser string hash value
+		htd.addFamily(new HColumnDescriptor("d")); //devices family
+		htd.addFamily(new HColumnDescriptor("t")); //transaction
 		admin.createTable(htd);
 		byte [] tablename = htd.getName();
 		HTableDescriptor [] tables = admin.listTables();
@@ -154,28 +156,33 @@ public class DBOutputDeviceSVMTrainingJob extends Configured implements Tool {
 		}
 		return result;
 	}
-
-	public static class DBOutputDeviceSVMTrainingMapper extends
+	
+	public static class DBOutputSVMDeviceIdentificationMapper extends
 		Mapper<LongWritable, List<Text>, Text, DeviceModel> {
-		public static final Log logger = LogFactory.getLog(DBOutputDeviceSVMTrainingMapper.class);
+		public static final Log logger = LogFactory.getLog(DBOutputSVMDeviceIdentificationMapper.class);
 		protected void map(LongWritable key, List<Text> values, Context context)
 			throws IOException, InterruptedException { 
-			if(values.size() < 450 || values.get(13).equals("")) {
+			if(values.size() < 450) {
 				logger.info("######## Filter out Map Input values which has only :" + values.size() + " columns.");
 				return;
 			}
 			String browserStringHash = values.get(13).toString();
+			if(browserStringHash.equals("")) return;
 			DeviceModel device = DeviceAttributeExtractor.getInstance().extractModel(values);
 			context.write(new Text(browserStringHash), device);
 		}
-		
 	} 
 	
-	public static class DBOutputDeviceSVMTrainingReducer extends Reducer<Text, DeviceModel, NullWritable, Writable> {
+	public static class DBOutputSVMDeviceIdentificationReducer extends Reducer<Text, DeviceModel, NullWritable, Writable> {
 		private JaccardCoefficientSimilarity similarity = new JaccardCoefficientSimilarity();
+		private SVMDeviceSimilarityDecision decision = new SVMDeviceSimilarityDecision(
+				similarity);
+		@SuppressWarnings("unchecked")
 		protected void reduce(Text key, Iterable<DeviceModel> values, Context context)
 			throws IOException, InterruptedException {
-			Vector<DeviceModel> v = new Vector<DeviceModel> ();
+			Vector v = new Vector ();
+			Vector duplicates = new Vector();
+			
 			Iterator<DeviceModel> ite = values.iterator();
 			while(ite.hasNext()) {
 				DeviceModel item = ite.next();
@@ -189,82 +196,86 @@ public class DBOutputDeviceSVMTrainingJob extends Configured implements Tool {
 				v.add(dm);
 			}
 			
-			for (int i = 0; i < v.size(); i++) {    
-				DeviceModel dmX = (DeviceModel)v.get(i);
+			for (int i = 0; i < v.size(); i++) {
+				Object buddy = null;
+				Object dmX = v.get(i);
 				
-				int nextIndex = i + 1;
-				for (int j = 0; j < v.size() - nextIndex; j++) {
-					DeviceModel dmY = (DeviceModel)v.get(j+nextIndex);
-					double score = similarity.similarity(dmX.all(), dmY.all());
-					double score_ba = similarity.similarity(
-							convert(dmX.getBrowserAttributes()),
-							convert(dmY.getBrowserAttributes()));
-					double score_pa = similarity.similarity(
-							convert(dmX.getPluginAttributes()),
-							convert(dmY.getPluginAttributes()));
-					double score_oa = similarity.similarity(
-							convert(dmX.getOsAttributes()),
-							convert(dmY.getOsAttributes()));
-					double score_ca = similarity.similarity(
-							convert(dmX.getConnectionAttributes()),
-							convert(dmY.getConnectionAttributes()));
+				for (int j = 0; j < duplicates.size(); j++) {
+					Object dmY = duplicates.get(j);
+					boolean match = decision.match(dmX, dmY);
 
-					if(score <=0.8 && score >= 0.5) {
-						byte [] rowID = Bytes.toBytes(String.valueOf(System.currentTimeMillis()));
-						Put put = new Put(rowID);
-						
-						byte [] family = Bytes.toBytes("h");
-						byte [] qualifier = Bytes.toBytes("string");
-						byte [] value = Bytes.toBytes(key.toString());
-						put.add(family, qualifier, value);
-						
-						family = Bytes.toBytes("t");
-						qualifier = Bytes.toBytes("val");
-						value = Bytes.toBytes(score >= 0.7 ? 1 : 0);
-						put.add(family, qualifier, value);
-						
-						family = Bytes.toBytes("s");
-						qualifier = Bytes.toBytes("total");
-						value = Bytes.toBytes(score);
-						put.add(family, qualifier, value);
-						
-						qualifier = Bytes.toBytes("browser");
-						value = Bytes.toBytes(score_ba);
-						put.add(family, qualifier, value);
-						
-						qualifier = Bytes.toBytes("plugin");
-						value = Bytes.toBytes(score_pa);
-						put.add(family, qualifier, value);
-						
-						qualifier = Bytes.toBytes("os");
-						value = Bytes.toBytes(score_oa);
-						put.add(family, qualifier, value);
-						
-						qualifier = Bytes.toBytes("conn");
-						value = Bytes.toBytes(score_ca);
-						put.add(family, qualifier, value);
-						
-						family = Bytes.toBytes("d");
-						qualifier = Bytes.toBytes("X");
-						value = Bytes.toBytes(dmX.toString().replaceAll("\\[|\\]", ""));
-						put.add(family, qualifier, value);
-						
-						qualifier = Bytes.toBytes("Y");
-						value = Bytes.toBytes(dmY.toString().replaceAll("\\[|\\]", ""));
-						put.add(family, qualifier, value);
-						
-						context.write(NullWritable.get(), put);
+					if(match) {
+						buddy = dmY;
+						break;
 					}
+				}
+				
+				if (buddy == null) {
+					duplicates.add(dmX);
+				} else {
+					Object unioned = DIHelper.union(dmX, buddy);
+					duplicates.remove(buddy);
+					v.add(unioned);
+				}
+			}
+			
+			
+			for(int k=0; k<duplicates.size(); k++) {
+				context.getCounter("Device Identification", "Number of Devices").increment(1);
+				if(duplicates.get(k) instanceof List<?>) {
+					context.getCounter("Device Identification", "Number of Merged Devices").increment(1);
+				}
+				
+				String timestamp = String.valueOf(System.currentTimeMillis());
+				byte [] rowid = Bytes.toBytes(String.valueOf(timestamp));
+				
+				write(rowid, key.toString(), duplicates.get(k), context);
+			}
+		}
+		
+		private void write(byte[] rowid, String bh, Object obj, Context context) throws IOException, InterruptedException {
+			if(obj instanceof DeviceModel) {
+				write(rowid, bh, (DeviceModel)obj, "device-0", "tx-0" ,context);
+			} else {
+				List<DeviceModel> lst = (List<DeviceModel>) obj;
+				int i = 0;
+				for(DeviceModel dm : lst) {
+					write(rowid, bh, dm, "device-"+i, "tx-"+i, context);
+					i++;
 				}
 			}
 		}
 		
-		private List<String> convert(List<Text> list) {
-			List<String> strList = new LinkedList<String> ();
-			for(Text item:list) {
-				strList.add(item.toString());
-			}
-			return strList;
+		private void write(byte[] rowid, String bh, DeviceModel dm,
+				String deviceIndex, String trainsactionIndex, Context context) throws IOException,
+				InterruptedException {
+
+			Put put = new Put(rowid);
+
+			byte[] family = Bytes.toBytes("h");
+			byte[] qualifier = Bytes.toBytes("browser_hash");
+			byte[] value = Bytes.toBytes(bh);
+			put.add(family, qualifier, value);
+
+			family = Bytes.toBytes("d");
+			qualifier = Bytes.toBytes(deviceIndex);
+			StringBuffer deviceStr = new StringBuffer();
+			deviceStr.append(dm.getBrowserAttributes().toString()).append(",")
+					.append(dm.getPluginAttributes().toString()).append(",")
+					.append(dm.getOsAttributes().toString()).append(",")
+					.append(dm.getConnectionAttributes().toString());
+			value = Bytes.toBytes(deviceStr.toString());
+			put.add(family, qualifier, value);
+
+			family = Bytes.toBytes("t");
+			qualifier = Bytes.toBytes(trainsactionIndex);
+			String tx = dm.getOrgId() + "," + dm.getEventId() + ","
+					+ dm.getRequestId() + "," + dm.getDeviceMatchResult() + ","
+					+ dm.getSessionId();
+			value = Bytes.toBytes(tx);
+			put.add(family, qualifier, value);
+
+			context.write(NullWritable.get(), put);
 		}
 	}
 }

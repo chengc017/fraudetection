@@ -187,7 +187,7 @@ public class TextOutputDeviceSVMTrainingJob extends Configured implements Tool {
 							+ deviceX.getConnectionAttributes().toString() + "\n"
 							+ deviceY.getConnectionAttributes().toString() + "\n"
 							+ "-------------------------------------------\n";
-					
+					System.out.println(svmline);
 					//if(score <= 0.8 && score >= 0.6) {
 						context.write(NullWritable.get(), new Text(svmline));
 					//}
