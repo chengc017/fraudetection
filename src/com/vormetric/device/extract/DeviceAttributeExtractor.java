@@ -51,7 +51,7 @@ public class DeviceAttributeExtractor {
 		browserAttributes.add(values.get(31));
 		browserAttributes.add(values.get(32));
 		browserAttributes.add(values.get(33));
-		browserAttributes.add(values.get(36));
+		//browserAttributes.add(values.get(36));
 		browserAttributes.add(values.get(37));
 		browserAttributes.add(values.get(38));
 		browserAttributes.add(values.get(42));
@@ -73,7 +73,8 @@ public class DeviceAttributeExtractor {
 		osAttributes.add(values.get(54));
 		osAttributes.add(values.get(55));
 		osAttributes.add(values.get(56));
-		osAttributes.add(values.get(65));
+		String normalized = ScreenResolutionNormalizer.normalize(values.get(65).toString());
+		osAttributes.add(new Text(normalized)); //screen resolution
 		osAttributes.add(values.get(74));
 		osAttributes.add(values.get(91));
 		osAttributes.add(values.get(92));
@@ -121,7 +122,7 @@ public class DeviceAttributeExtractor {
 		valueList.add(values.get(31));
 		valueList.add(values.get(32));
 		valueList.add(values.get(33));
-		valueList.add(values.get(36));
+		//valueList.add(values.get(36));
 		valueList.add(values.get(37));
 		valueList.add(values.get(38));
 		valueList.add(values.get(42));
@@ -139,7 +140,8 @@ public class DeviceAttributeExtractor {
 		valueList.add(values.get(54));
 		valueList.add(values.get(55));
 		valueList.add(values.get(56));
-		valueList.add(values.get(65));
+		String normalized = ScreenResolutionNormalizer.normalize(values.get(65).toString());
+		valueList.add(new Text(normalized));  // screen resolution
 		valueList.add(values.get(74));
 		valueList.add(values.get(91));
 		valueList.add(values.get(92));
@@ -183,7 +185,7 @@ public class DeviceAttributeExtractor {
 		browser.setEnabledFl(values.get(31).toString());
 		browser.setEnabledIm(values.get(32).toString());
 		browser.setEnabledJs(values.get(33).toString());
-		browser.setFlashGuid(values.get(36).toString());
+		//browser.setFlashGuid(values.get(36).toString());
 		browser.setFlashLang(values.get(37).toString());
 		browser.setFlashOs(values.get(38).toString());
 		browser.setFlashVersion(values.get(42).toString());
@@ -205,7 +207,7 @@ public class DeviceAttributeExtractor {
 		os.setOs(values.get(54).toString());
 		os.setOsFontsHash(values.get(55).toString());
 		os.setOsFontsNumber(values.get(56).toString());
-		os.setScreenRes(values.get(65).toString());
+		os.setScreenRes(ScreenResolutionNormalizer.normalize(values.get(65).toString()));  //resolution
 		os.setTimeZone(values.get(74).toString());
 		os.setUaBrowser(values.get(91).toString());
 		os.setUaMobile(values.get(92).toString());

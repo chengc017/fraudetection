@@ -36,7 +36,7 @@ import com.vormetric.mapred.output.ProtobufOutputFormat;
 
 /**
  * @author shawnkuo
- * step1: extract data
+ * step1: extract data from csv file, transfer to protobuf object.
  */
 public class DeviceDataExtractorJob extends Configured implements Tool {
 

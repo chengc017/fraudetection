@@ -42,9 +42,9 @@ import com.vormetric.device.model.DeviceModel;
  * @author xioguo
  *
  */
-public class SVMDeviceSimilarityTrainningJob extends Configured implements Tool {
+public class DBOutputDeviceSVMTrainingJob extends Configured implements Tool {
 
-	public static final Log logger = LogFactory.getLog(SVMDeviceSimilarityTrainningJob.class);
+	public static final Log logger = LogFactory.getLog(DBOutputDeviceSVMTrainingJob.class);
 	
 	public static final String TABLENAME = "dd";
 	
@@ -85,7 +85,7 @@ public class SVMDeviceSimilarityTrainningJob extends Configured implements Tool 
 		
 		Job job = new Job(conf);
 		job.setJobName("Device Similarity SVM Trainner");
-		job.setJarByClass(SVMDeviceSimilarityTrainningJob.class);
+		job.setJarByClass(DBOutputDeviceSVMTrainingJob.class);
 		
 		//map's input format
 		job.setInputFormatClass(CSVTextInputFormat.class);
@@ -96,8 +96,8 @@ public class SVMDeviceSimilarityTrainningJob extends Configured implements Tool 
 		job.setOutputKeyClass(Text.class);  		
 		job.setOutputValueClass(DeviceModel.class); 
 		
-		job.setMapperClass(SVMDeviceSimilarityTrainningMapper.class);
-		job.setReducerClass(SVMDeviceSimilarityTrainningReducer.class);
+		job.setMapperClass(DBOutputDeviceSVMTrainingMapper.class);
+		job.setReducerClass(DBOutputDeviceSVMTrainingReducer.class);
 		job.setNumReduceTasks(2);
 		
 		SequenceFileInputFormat.addInputPath(job, in);
@@ -140,7 +140,7 @@ public class SVMDeviceSimilarityTrainningJob extends Configured implements Tool 
 		int res = -1;
 		try {
 			logger.info("Initializing Device Similarity SVM Trainning Job");
-			SVMDeviceSimilarityTrainningJob deviceSimilarity = new SVMDeviceSimilarityTrainningJob();
+			DBOutputDeviceSVMTrainingJob deviceSimilarity = new DBOutputDeviceSVMTrainingJob();
 
 			// Let ToolRunner handle generic command-line options and run hadoop
 			res = ToolRunner.run(new Configuration(), deviceSimilarity, args);
@@ -155,9 +155,9 @@ public class SVMDeviceSimilarityTrainningJob extends Configured implements Tool 
 		}
 	} 
 
-	public static class SVMDeviceSimilarityTrainningMapper extends
+	public static class DBOutputDeviceSVMTrainingMapper extends
 		Mapper<LongWritable, List<Text>, Text, DeviceModel> {
-		public static final Log logger = LogFactory.getLog(SVMDeviceSimilarityTrainningMapper.class);
+		public static final Log logger = LogFactory.getLog(DBOutputDeviceSVMTrainingMapper.class);
 		protected void map(LongWritable key, List<Text> values, Context context)
 			throws IOException, InterruptedException { 
 			if(values.size() < 450 || values.get(13).equals("")) {
@@ -171,7 +171,7 @@ public class SVMDeviceSimilarityTrainningJob extends Configured implements Tool 
 		
 	} 
 	
-	public static class SVMDeviceSimilarityTrainningReducer extends Reducer<Text, DeviceModel, NullWritable, Writable> {
+	public static class DBOutputDeviceSVMTrainingReducer extends Reducer<Text, DeviceModel, NullWritable, Writable> {
 		private JaccardCoefficientSimilarity similarity = new JaccardCoefficientSimilarity();
 		protected void reduce(Text key, Iterable<DeviceModel> values, Context context)
 			throws IOException, InterruptedException {
