@@ -174,7 +174,7 @@ public class TextOutputDeviceSVMTrainingJob extends Configured implements Tool {
 						label = 1;
 					} 
 					
-					String svmline = label + " 1:" + browser + " 2:"+ plugin + " 3:"+os + " 4:"+connection + "\n";
+					String svmline = label + " 1:" + browser + " 2:"+ plugin + " 3:"+os + " 4:"+connection;
 					String output = 
 							+ score + " [browser:"+ browser + " | plugin:" + plugin + " | os:" + os + " | connection:" + connection + "]"
 							+ "\n-------------------------------------------\n" 
@@ -188,9 +188,9 @@ public class TextOutputDeviceSVMTrainingJob extends Configured implements Tool {
 							+ deviceY.getConnectionAttributes().toString() + "\n"
 							+ "-------------------------------------------\n";
 					
-					if(score <= 0.8 && score >= 0.6) {
-						context.write(NullWritable.get(), new Text(svmline+output));
-					}
+					//if(score <= 0.8 && score >= 0.6) {
+						context.write(NullWritable.get(), new Text(svmline));
+					//}
 				}
 			}
 		}
