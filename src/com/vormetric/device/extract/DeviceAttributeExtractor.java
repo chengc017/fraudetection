@@ -40,6 +40,7 @@ public class DeviceAttributeExtractor {
 		deviceModel.setRequestId(values.get(7).toString());
 		deviceModel.setDeviceMatchResult(values.get(26).toString());
 		deviceModel.setSessionId(values.get(67).toString());
+		deviceModel.setBrowserHash(values.get(13).toString());
 		
 		List<Text> browserAttributes = new LinkedList<Text> ();
 		browserAttributes.add(values.get(12));

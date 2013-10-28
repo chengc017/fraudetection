@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.vormetric.device;
+package com.vormetric.device.train;
 
 import java.io.IOException;
 import java.util.ArrayList;

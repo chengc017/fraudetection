@@ -4,6 +4,7 @@
 package com.vormetric.device;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Vector;
@@ -34,9 +35,11 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import com.vormetric.algorithm.DIHelper;
+import com.vormetric.algorithm.decision.Match;
 import com.vormetric.algorithm.decision.SVMDeviceSimilarityDecision;
 import com.vormetric.algorithm.similarities.JaccardCoefficientSimilarity;
 import com.vormetric.device.extract.DeviceAttributeExtractor;
+import com.vormetric.device.hbase.DeviceDAO;
 import com.vormetric.device.model.DeviceModel;
 
 /**
@@ -49,6 +52,8 @@ public class DBOutputSVMDeviceIdentificationJob extends Configured implements
 	public static final Log logger = LogFactory.getLog(DBOutputSVMDeviceIdentificationJob.class);
 	
 	public static final String TABLENAME = "devices";
+	
+	public static HBaseAdmin admin = null;
 	
 	/**
 	 * @param args
@@ -88,14 +93,14 @@ public class DBOutputSVMDeviceIdentificationJob extends Configured implements
 		Configuration conf = HBaseConfiguration.create();
 		conf.set("hbase.zookeeper.quorum", "localhost");
 		
-		HBaseAdmin admin = new HBaseAdmin(conf);
+		admin = new HBaseAdmin(conf);
 		// if table dose not exist, create one now.
-		if(!admin.tableExists(TABLENAME)) {
+		if(!admin.tableExists(DeviceDAO.TABLE_NAME)) {
 			logger.info("creating training table...");
 			boolean created = createTable(admin);
 			if(!created) return 0;
 		}
-		conf.set(TableOutputFormat.OUTPUT_TABLE, TABLENAME);
+		conf.set(TableOutputFormat.OUTPUT_TABLE, Bytes.toString(DeviceDAO.TABLE_NAME));
 		
 		//Configuration conf = getConf();
 		// Performance tuning
@@ -138,17 +143,17 @@ public class DBOutputSVMDeviceIdentificationJob extends Configured implements
 	}
 
 	private boolean createTable(HBaseAdmin admin) throws IOException {
-		HTableDescriptor htd = new HTableDescriptor(TABLENAME);
-		htd.addFamily(new HColumnDescriptor("h")); //browser string hash value
-		htd.addFamily(new HColumnDescriptor("d")); //devices family
-		htd.addFamily(new HColumnDescriptor("t")); //transaction
+		HTableDescriptor htd = new HTableDescriptor(DeviceDAO.TABLE_NAME);
+		htd.addFamily(new HColumnDescriptor(DeviceDAO.HASH_FAMILY)); //browser string hash value
+		htd.addFamily(new HColumnDescriptor(DeviceDAO.LENGTH_FAMILY)); //numbers of similar devices merged in this row.
+		htd.addFamily(new HColumnDescriptor(DeviceDAO.DEVICE_FAMILY)); //devices family
+		htd.addFamily(new HColumnDescriptor(DeviceDAO.TRANSACTION_FAMILY)); //transaction
 		admin.createTable(htd);
 		byte [] tablename = htd.getName();
 		HTableDescriptor [] tables = admin.listTables();
 		boolean result = false;
-		int i=0;
 		for(HTableDescriptor table : tables) {
-			if(tables.length != 1 && Bytes.equals(tablename, tables[i++].getName())) {
+			if(tables.length != 1 && Bytes.equals(tablename, table.getName())) {
 				logger.info("Failed create of table.");
 			} else {
 				result = true;
@@ -159,11 +164,13 @@ public class DBOutputSVMDeviceIdentificationJob extends Configured implements
 	
 	public static class DBOutputSVMDeviceIdentificationMapper extends
 		Mapper<LongWritable, List<Text>, Text, DeviceModel> {
-		public static final Log logger = LogFactory.getLog(DBOutputSVMDeviceIdentificationMapper.class);
+		public static final Log logger = LogFactory
+				.getLog(DBOutputSVMDeviceIdentificationMapper.class);
 		protected void map(LongWritable key, List<Text> values, Context context)
 			throws IOException, InterruptedException { 
-			if(values.size() < 450) {
-				logger.info("######## Filter out Map Input values which has only :" + values.size() + " columns.");
+			if (values.size() < 450) {
+				logger.info("######## Filter out Map Input values which has only :"
+						+ values.size() + " columns.");
 				return;
 			}
 			String browserStringHash = values.get(13).toString();
@@ -173,11 +180,21 @@ public class DBOutputSVMDeviceIdentificationJob extends Configured implements
 		}
 	} 
 	
-	public static class DBOutputSVMDeviceIdentificationReducer extends Reducer<Text, DeviceModel, NullWritable, Writable> {
+	public static class DBOutputSVMDeviceIdentificationReducer extends
+			Reducer<Text, DeviceModel, NullWritable, Writable> {
+		public static final Log logger = LogFactory
+				.getLog(DBOutputSVMDeviceIdentificationReducer.class);
 		private JaccardCoefficientSimilarity similarity = new JaccardCoefficientSimilarity();
 		private SVMDeviceSimilarityDecision decision = new SVMDeviceSimilarityDecision(
 				similarity);
-		@SuppressWarnings("unchecked")
+		private DeviceDAO dao = null;
+		
+		@Override
+		protected void setup(Context context) {
+			dao = new DeviceDAO(admin);
+		}
+		
+		@SuppressWarnings({ "unchecked", "rawtypes" })
 		protected void reduce(Text key, Iterable<DeviceModel> values, Context context)
 			throws IOException, InterruptedException {
 			Vector v = new Vector ();
@@ -193,18 +210,20 @@ public class DBOutputSVMDeviceIdentificationJob extends Configured implements
 				dm.setPluginAttributes(item.getPluginAttributes());
 				dm.setOsAttributes(item.getOsAttributes());
 				dm.setConnectionAttributes(item.getConnectionAttributes());
+				dm.setBrowserHash(item.getBrowserHash());
 				v.add(dm);
 			}
 			
+			Match match = new Match(false);
 			for (int i = 0; i < v.size(); i++) {
 				Object buddy = null;
 				Object dmX = v.get(i);
 				
 				for (int j = 0; j < duplicates.size(); j++) {
 					Object dmY = duplicates.get(j);
-					boolean match = decision.match(dmX, dmY);
+					match = decision.match(dmX, dmY);
 
-					if(match) {
+					if(match.result) {
 						buddy = dmY;
 						break;
 					}
@@ -213,69 +232,48 @@ public class DBOutputSVMDeviceIdentificationJob extends Configured implements
 				if (buddy == null) {
 					duplicates.add(dmX);
 				} else {
-					Object unioned = DIHelper.union(dmX, buddy);
+					Object unioned = null;
+					if(match.result && match.total != 1) {
+						unioned = DIHelper.union(dmX, buddy);
+					} else {
+						unioned = dmX;
+					}
 					duplicates.remove(buddy);
 					v.add(unioned);
 				}
 			}
 			
-			
 			for(int k=0; k<duplicates.size(); k++) {
-				context.getCounter("Device Identification", "Number of Devices").increment(1);
-				if(duplicates.get(k) instanceof List<?>) {
-					context.getCounter("Device Identification", "Number of Merged Devices").increment(1);
+				//count
+				context.getCounter("Device Identification", "Number of Devices")
+						.increment(1);
+				if (duplicates.get(k) instanceof List<?>) {
+					context.getCounter("Device Identification",
+							"Groups of Merged Devices").increment(1);
 				}
-				
-				String timestamp = String.valueOf(System.currentTimeMillis());
-				byte [] rowid = Bytes.toBytes(String.valueOf(timestamp));
-				
-				write(rowid, key.toString(), duplicates.get(k), context);
+				//db
+				write(duplicates.get(k), context);
 			}
 		}
 		
-		private void write(byte[] rowid, String bh, Object obj, Context context) throws IOException, InterruptedException {
-			if(obj instanceof DeviceModel) {
-				write(rowid, bh, (DeviceModel)obj, "device-0", "tx-0" ,context);
-			} else {
-				List<DeviceModel> lst = (List<DeviceModel>) obj;
-				int i = 0;
-				for(DeviceModel dm : lst) {
-					write(rowid, bh, dm, "device-"+i, "tx-"+i, context);
-					i++;
-				}
-			}
-		}
-		
-		private void write(byte[] rowid, String bh, DeviceModel dm,
-				String deviceIndex, String trainsactionIndex, Context context) throws IOException,
+		@SuppressWarnings({ "unchecked", "static-access" })
+		private void write(Object obj, Context context) throws IOException,
 				InterruptedException {
-
-			Put put = new Put(rowid);
-
-			byte[] family = Bytes.toBytes("h");
-			byte[] qualifier = Bytes.toBytes("browser_hash");
-			byte[] value = Bytes.toBytes(bh);
-			put.add(family, qualifier, value);
-
-			family = Bytes.toBytes("d");
-			qualifier = Bytes.toBytes(deviceIndex);
-			StringBuffer deviceStr = new StringBuffer();
-			deviceStr.append(dm.getBrowserAttributes().toString()).append(",")
-					.append(dm.getPluginAttributes().toString()).append(",")
-					.append(dm.getOsAttributes().toString()).append(",")
-					.append(dm.getConnectionAttributes().toString());
-			value = Bytes.toBytes(deviceStr.toString());
-			put.add(family, qualifier, value);
-
-			family = Bytes.toBytes("t");
-			qualifier = Bytes.toBytes(trainsactionIndex);
-			String tx = dm.getOrgId() + "," + dm.getEventId() + ","
-					+ dm.getRequestId() + "," + dm.getDeviceMatchResult() + ","
-					+ dm.getSessionId();
-			value = Bytes.toBytes(tx);
-			put.add(family, qualifier, value);
-
-			context.write(NullWritable.get(), put);
+			if (obj instanceof DeviceModel) {
+				DeviceModel d = (DeviceModel) obj;
+				Put p = dao.mkPut(d);
+				context.write(NullWritable.get(), p);
+			} else {
+				List<DeviceModel> lst = (ArrayList<DeviceModel>) obj;
+				long dt = System.currentTimeMillis();
+				for (int i = 0; i < lst.size(); i++) {
+					Put p = dao.mkPut(lst.get(i),
+							dao.mkRowKey(lst.get(i).getBrowserHash(), dt),
+							lst.size(),
+							i, i);
+					context.write(NullWritable.get(), p);
+				}
+			}
 		}
 	}
 }

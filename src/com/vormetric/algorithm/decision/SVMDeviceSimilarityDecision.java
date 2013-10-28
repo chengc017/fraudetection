@@ -39,7 +39,7 @@ public class SVMDeviceSimilarityDecision {
 		}
 	}
 	
-	public boolean match(Object a, Object b) {
+	public Match match(Object a, Object b) {
 		if(a instanceof DeviceModel && b instanceof DeviceModel) {
 			return match((DeviceModel)a, (DeviceModel)b);
 		} else if(a instanceof DeviceModel && b instanceof List<?>) {
@@ -48,33 +48,33 @@ public class SVMDeviceSimilarityDecision {
 			return match((DeviceModel)b, (ArrayList<DeviceModel>)a);
 		} else if (a instanceof List<?> && b instanceof List<?>) {
 			return match((ArrayList<DeviceModel>)a, (ArrayList<DeviceModel>)b);
+		} else {
+			return new Match(false);
 		}
-		
-		return false;
 	}
 	
-	protected boolean match(ArrayList<DeviceModel> a, ArrayList<DeviceModel> b) {
-		boolean match = false;
+	protected Match match(ArrayList<DeviceModel> a, ArrayList<DeviceModel> b) {
+		Match match = new Match(false);
 		for(DeviceModel dm :a) {
 			match=match(dm, b);
-			if(match) break;
+			if(match.result) break;
 		}
 		return match;
 	}
 	
-	protected boolean match(DeviceModel a, ArrayList<DeviceModel> b) {
-		boolean match = false;
+	protected Match match(DeviceModel a, ArrayList<DeviceModel> b) {
+		Match match = new Match(false);
 		for(DeviceModel dm:b) {
-			if(match(a,dm)) {
-				match = true;
+			match = match(a,dm);
+			if(match.result) {
 				break;
 			}
 		}
 		return match;
 	}
 	
-	private boolean match(DeviceModel dmX, DeviceModel dmY) {
-		double score = similarity.similarity(dmX.all(), dmY.all());
+	private Match match(DeviceModel dmX, DeviceModel dmY) {
+		double total = similarity.similarity(dmX.all(), dmY.all());
 		double browser = similarity.similarity(
 				convert(dmX.getBrowserAttributes()),
 				convert(dmY.getBrowserAttributes()));
@@ -87,9 +87,9 @@ public class SVMDeviceSimilarityDecision {
 		double connection = similarity.similarity(
 				convert(dmX.getConnectionAttributes()),
 				convert(dmY.getConnectionAttributes()));
-		boolean result = match(browser, plugin, os, connection);
-//		if(result)
-//			System.out.println("----------## score: " + score + " --> " + result);
+		boolean match = match(browser, plugin, os, connection);
+		Match result = new Match(match, total, browser, plugin, os,
+				connection);
 		return result;
 	}
 	

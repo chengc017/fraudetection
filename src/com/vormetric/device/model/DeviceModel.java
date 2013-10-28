@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.io.GenericWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -21,17 +22,7 @@ import com.vormetric.mapred.io.ArrayListWritable;
  * @author xioguo
  *
  */
-public class DeviceModel extends GenericWritable {
-	
-	private String orgId;
-	
-	private String eventId;
-	
-	private String requestId;
-	
-	private String deviceMatchResult;
-	
-	private String sessionId;
+public class DeviceModel extends DeviceBase {
 	
 	private ArrayListWritable<Text> browserAttributes;
 	
@@ -62,51 +53,8 @@ public class DeviceModel extends GenericWritable {
 		this.deviceMatchResult = deviceMatchResult;
 		this.sessionId = sessionId;
 	}
-
-	public String getOrgId() {
-		return orgId;
-	}
-
-	public void setOrgId(String orgId) {
-		this.orgId = orgId;
-	}
-
-	public String getEventId() {
-		return eventId;
-	}
-
-	public void setEventId(String eventId) {
-		this.eventId = eventId;
-	}
-
-	public String getRequestId() {
-		return requestId;
-	}
-
-	public void setRequestId(String requestId) {
-		this.requestId = requestId;
-	}
-
-	public String getDeviceMatchResult() {
-		return deviceMatchResult;
-	}
-
-	public void setDeviceMatchResult(String deviceMatchResult) {
-		this.deviceMatchResult = deviceMatchResult;
-	}
-
-	public String getSessionId() {
-		return sessionId;
-	}
-
-	public void setSessionId(String sessionId) {
-		this.sessionId = sessionId;
-	}
 	
 	public List<Text> getBrowserAttributes() {
-//		Text [] values = new Text[browserAttributes.size()]; 
-//		List<Text> list = Arrays.asList(browserAttributes.toArray(values));
-//		return convert(list);
 		return browserAttributes;
 	}
 
@@ -115,9 +63,6 @@ public class DeviceModel extends GenericWritable {
 	}
 
 	public List<Text> getPluginAttributes() {
-//		Text [] values = new Text[pluginAttributes.size()];
-//		List<Text> list = Arrays.asList(pluginAttributes.toArray(values));
-//		return convert(list);
 		return pluginAttributes;
 	}
 
@@ -126,9 +71,6 @@ public class DeviceModel extends GenericWritable {
 	}
 
 	public List<Text> getOsAttributes() {
-//		Text [] values = new Text[osAttributes.size()];
-//		List<Text> list = Arrays.asList(osAttributes.toArray(values));
-//		return convert(list);
 		return osAttributes;
 	}
 
@@ -137,9 +79,6 @@ public class DeviceModel extends GenericWritable {
 	}
 
 	public List<Text> getConnectionAttributes() {
-//		Text [] values = new Text[connectionAttributes.size()];
-//		List<Text> list = Arrays.asList(connectionAttributes.toArray(values));
-//		return convert(list);
 		return connectionAttributes;
 	}
 
@@ -174,7 +113,7 @@ public class DeviceModel extends GenericWritable {
 		requestId = in.readUTF();
 		deviceMatchResult = in.readUTF();
 		sessionId = in.readUTF();
-		
+		browserHash = in.readUTF();
 		browserAttributes.readFields(in);
 		pluginAttributes.readFields(in);
 		osAttributes.readFields(in);
@@ -192,12 +131,25 @@ public class DeviceModel extends GenericWritable {
 		out.writeUTF(eventId);
 		out.writeUTF(deviceMatchResult);
 		out.writeUTF(sessionId);
-		
+		out.writeUTF(browserHash);
 		browserAttributes.write(out);
 		pluginAttributes.write(out);
 		osAttributes.write(out);
 		connectionAttributes.write(out);
 		return;
+	}
+	
+	public String getTransaction() {
+		return orgId + "," + eventId + "," + requestId + ","
+				+ deviceMatchResult + "," + sessionId;
+	}
+	
+	public String getString() {
+		String deviceString = getBrowserAttributes().toString() + ","
+				  + getPluginAttributes().toString() + "," 
+				  + getOsAttributes().toString() + ","
+				  + getConnectionAttributes().toString();
+		return deviceString;
 	}
 	
 	public int hashCode() {
