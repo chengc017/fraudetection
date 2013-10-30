@@ -29,4 +29,10 @@ public class Match {
 		this.os = os;
 		this.connection = connection;
 	}
+	
+	public String toString() {
+		return String
+				.format("<Match: %s, Score: %s [browser: %s, plugin: %s, os: %s, connection: %s]>",
+						result, total, browser, plugin, os, connection);
+	}
 }
