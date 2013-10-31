@@ -5,7 +5,7 @@
 	<!-- Source code and lib dirs -->
 	<property name="src.dir" location="src"/>
 	<property name="config.dir" location="conf"/>
-    <property name="lib.dir" location="lib"/>
+    <property name="lib.dir" location="lib/deploy"/>
 	
 	<!-- Ouptut dirs -->
 	<property name="build.dir" location="build/classes"/>
@@ -136,6 +136,28 @@
 	    		<fileset dir="${dist.dir}/fraudection/"/>
 	    	</jar>
 	    </target>
+	
+	<target name="device_detector" depends="compile">
+    	<delete file="${dist.dir}/device-detector.jar"/>
+    	<delete dir="${dist.dir}/device/lib"/>
+    	<mkdir dir="${dist.dir}/device/lib"/>
+    	<copy todir="${dist.dir}/device/lib">
+    		<fileset dir="${lib.dir}/">
+    		</fileset>
+        </copy>
+    	<copy todir="${dist.dir}/device">
+    		<fileset dir="${config.dir}"/>
+    	</copy>
+		
+    	<jar destfile="${dist.dir}/device-detector.jar" compress="true">
+    		<fileset dir="${build.dir}"/>
+    		<fileset dir="${dist.dir}/device"/>
+    		<manifest>
+    			<attribute name="Main-Class" value="com.vormetric.device.SampleDeviceIdentifierClient"/>
+    			<attribute name="Class-Path" value="lib/*.jar"/>
+	    	</manifest>
+    	</jar>
+    </target>
 	
 	<!-- 
        Output cleanup.
