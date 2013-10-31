@@ -19,13 +19,13 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.lib.input.CSVLineRecordReader;
-import org.apache.hadoop.mapreduce.lib.input.CSVNLineInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+
+import com.vormetric.mapred.csv.CSVInputFormat;
 
 
 /**
@@ -80,10 +80,6 @@ public class ValidValuePercentJob extends Configured implements Tool {
 		conf.setInt("mapred.job.reuse.jvm.num.tasks", 3);
 		conf.set("output_path", out.toString());
 		
-		conf.set(CSVLineRecordReader.FORMAT_DELIMITER, "\"");
-		conf.set(CSVLineRecordReader.FORMAT_SEPARATOR, ",");
-		conf.setBoolean(CSVLineRecordReader.IS_ZIPFILE, false);
-		
 		conf.set("mapred.textoutputformat.separatorText", ",");
 		
 		FileSystem fs = FileSystem.get(conf);
@@ -97,7 +93,7 @@ public class ValidValuePercentJob extends Configured implements Tool {
 		job.setJarByClass(ValidValuePercentJob.class);
 		job.setNumReduceTasks(1);
 		
-		job.setInputFormatClass(CSVNLineInputFormat.class);
+		job.setInputFormatClass(CSVInputFormat.class);
 		job.setOutputFormatClass(TextOutputFormat.class);
 		
 		job.setOutputKeyClass(IntWritable.class);

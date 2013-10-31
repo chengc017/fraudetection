@@ -5,14 +5,11 @@ package com.vormetric.algorithm.decision;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 
 import libsvm.svm;
 import libsvm.svm_model;
 import libsvm.svm_node;
-
-import org.apache.hadoop.io.Text;
 
 import com.vormetric.algorithm.similarities.Similarity;
 import com.vormetric.device.model.DeviceModel;
@@ -21,7 +18,7 @@ import com.vormetric.device.model.DeviceModel;
  * @author shawnkuo
  *
  */
-public class SVMDeviceSimilarityDecision {
+public class SVMDeviceSimilarityDecision<T1, T2> implements SimilarityDecision<T1, T2> {
 
 	private Similarity similarity;
 	private static svm_model model;
@@ -64,8 +61,8 @@ public class SVMDeviceSimilarityDecision {
 	
 	protected Match match(DeviceModel a, ArrayList<DeviceModel> b) {
 		Match match = new Match(false);
-		for(DeviceModel dm:b) {
-			match = match(a,dm);
+		for(DeviceModel dm : b) {
+			match = match(a, dm);
 			if(match.result) {
 				break;
 			}
@@ -73,27 +70,27 @@ public class SVMDeviceSimilarityDecision {
 		return match;
 	}
 	
-	private Match match(DeviceModel dmX, DeviceModel dmY) {
+	public Match match(DeviceModel dmX, DeviceModel dmY) {
 		double total = similarity.similarity(dmX.all(), dmY.all());
 		double browser = similarity.similarity(
-				convert(dmX.getBrowserAttributes()),
-				convert(dmY.getBrowserAttributes()));
+				dmX.getBrowserAttributes(),
+				dmY.getBrowserAttributes());
 		double plugin = similarity.similarity(
-				convert(dmX.getPluginAttributes()),
-				convert(dmY.getPluginAttributes()));
+				dmX.getPluginAttributes(),
+				dmY.getPluginAttributes());
 		double os = similarity.similarity(
-				convert(dmX.getOsAttributes()),
-				convert(dmY.getOsAttributes()));
+				dmX.getOsAttributes(),
+				dmY.getOsAttributes());
 		double connection = similarity.similarity(
-				convert(dmX.getConnectionAttributes()),
-				convert(dmY.getConnectionAttributes()));
+				dmX.getConnectionAttributes(),
+				dmY.getConnectionAttributes());
 		boolean match = match(browser, plugin, os, connection);
 		Match result = new Match(match, total, browser, plugin, os,
 				connection);
 		return result;
 	}
 	
-	public boolean match(double browser, double plugin, double os, double connection) {
+	protected boolean match(double browser, double plugin, double os, double connection) {
 		svm_node [] nodes = new svm_node [4];
 		nodes[0] = new svm_node();
 		nodes[0].index = 1;
@@ -113,13 +110,5 @@ public class SVMDeviceSimilarityDecision {
 		
 		double value = svm.svm_predict(model, nodes);
 		return ((int)value) == 1 ? true : false;
-	}
-	
-	private List<String> convert(List<Text> list) {
-		List<String> strList = new LinkedList<String> ();
-		for(Text item:list) {
-			strList.add(item.toString());
-		}
-		return strList;
 	}
 }

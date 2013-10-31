@@ -3,11 +3,15 @@
  */
 package com.vormetric.device.extract;
 
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.lib.input.ArrayListTextWritable;
+
+import au.com.bytecode.opencsv.CSVReader;
 
 import com.vormetric.device.model.DeviceModel;
 import com.vormetric.device.proto.DeviceProto.Device;
@@ -15,6 +19,7 @@ import com.vormetric.device.proto.DeviceProto.Device.Browser;
 import com.vormetric.device.proto.DeviceProto.Device.Connection;
 import com.vormetric.device.proto.DeviceProto.Device.OS;
 import com.vormetric.device.proto.DeviceProto.Device.Plugin;
+import com.vormetric.mapred.io.ArrayListWritable;
 
 /**
  * @author xioguo
@@ -32,6 +37,93 @@ public class DeviceAttributeExtractor {
 		return DeviceAttributeExtractor.instance;
 	}
 	
+	public List<DeviceModel> extract(String csvFile) {
+		CSVReader reader = null;
+		List<DeviceModel> deviceList = new ArrayList<DeviceModel> ();
+		try {
+			reader = new CSVReader(new FileReader(csvFile));
+			String row[]  = null;
+			while ((row = reader.readNext()) != null) {
+				DeviceModel deviceModel = new DeviceModel();
+				deviceModel.setOrgId(row[1]);
+				deviceModel.setEventId(row[2]);
+				deviceModel.setRequestId(row[7]);
+				deviceModel.setDeviceMatchResult(row[26]);
+				deviceModel.setSessionId(row[67]);
+				deviceModel.setBrowserHash(row[13]);
+				
+				List<String> browserAttributes = new LinkedList<String> ();
+				browserAttributes.add(row[12]);
+				browserAttributes.add(row[13]);
+				browserAttributes.add(row[14]);
+				browserAttributes.add(row[16]);
+				browserAttributes.add(row[11]);
+				browserAttributes.add(row[30]);
+				browserAttributes.add(row[31]);
+				browserAttributes.add(row[32]);
+				browserAttributes.add(row[33]);
+				browserAttributes.add(row[37]);
+				browserAttributes.add(row[38]);
+				browserAttributes.add(row[42]);
+				browserAttributes.add(row[50]);
+				deviceModel.setBrowserAttributes(browserAttributes);
+				
+				List<String> pluginAttributes = new LinkedList<String> ();
+				pluginAttributes.add(row[57]);
+				pluginAttributes.add(row[58]);
+				pluginAttributes.add(row[59]);
+				pluginAttributes.add(row[62]);
+				pluginAttributes.add(row[110]);
+				pluginAttributes.add(row[111]);
+				pluginAttributes.add(row[112]);
+				pluginAttributes.add(row[113]);
+				deviceModel.setPluginAttributes(pluginAttributes);
+				
+				List<String> osAttributes = new LinkedList<String> ();
+				osAttributes.add(row[54]);
+				osAttributes.add(row[55]);
+				osAttributes.add(row[56]);
+				String normalized = ScreenResolutionNormalizer.normalize(row[65]);
+				osAttributes.add(normalized); //screen resolution
+				osAttributes.add(row[74]);
+				osAttributes.add(row[91]);
+				osAttributes.add(row[92]);
+				osAttributes.add(row[93]);
+				osAttributes.add(row[94]);
+				osAttributes.add(row[99]);
+				deviceModel.setOsAttributes(osAttributes);
+				
+				List<String> connectionAttributes = new LinkedList<String> ();
+				connectionAttributes.add(row[150]);
+				connectionAttributes.add(row[152]);
+				connectionAttributes.add(row[153]);
+				connectionAttributes.add(row[154]);
+				connectionAttributes.add(row[161]);
+				connectionAttributes.add(row[396]);
+				connectionAttributes.add(row[445]);
+				connectionAttributes.add(row[446]);
+				connectionAttributes.add(row[449]);
+				//os
+				connectionAttributes.add(row[45]);
+				connectionAttributes.add(row[46]);
+				connectionAttributes.add(row[70]);
+				connectionAttributes.add(row[71]);
+				deviceModel.setConnectionAttributes(connectionAttributes);
+				
+				deviceList.add(deviceModel);
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		} finally {
+			try {
+				reader.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		return deviceList;
+	}
+	
 	public DeviceModel extractModel(List<Text> values) {
 		DeviceModel deviceModel = new DeviceModel();
 		
@@ -42,70 +134,69 @@ public class DeviceAttributeExtractor {
 		deviceModel.setSessionId(values.get(67).toString());
 		deviceModel.setBrowserHash(values.get(13).toString());
 		
-		List<Text> browserAttributes = new LinkedList<Text> ();
-		browserAttributes.add(values.get(12));
-		browserAttributes.add(values.get(13));
-		browserAttributes.add(values.get(14));
-		browserAttributes.add(values.get(16));
-		browserAttributes.add(values.get(11));
-		browserAttributes.add(values.get(30));
-		browserAttributes.add(values.get(31));
-		browserAttributes.add(values.get(32));
-		browserAttributes.add(values.get(33));
-		//browserAttributes.add(values.get(36));
-		browserAttributes.add(values.get(37));
-		browserAttributes.add(values.get(38));
-		browserAttributes.add(values.get(42));
-		browserAttributes.add(values.get(50));
+		List<String> browserAttributes = new LinkedList<String> ();
+		browserAttributes.add(values.get(12).toString());
+		browserAttributes.add(values.get(13).toString());
+		browserAttributes.add(values.get(14).toString());
+		browserAttributes.add(values.get(16).toString());
+		browserAttributes.add(values.get(11).toString());
+		browserAttributes.add(values.get(30).toString());
+		browserAttributes.add(values.get(31).toString());
+		browserAttributes.add(values.get(32).toString());
+		browserAttributes.add(values.get(33).toString());
+		browserAttributes.add(values.get(37).toString());
+		browserAttributes.add(values.get(38).toString());
+		browserAttributes.add(values.get(42).toString());
+		browserAttributes.add(values.get(50).toString());
 		deviceModel.setBrowserAttributes(browserAttributes);
 		
-		List<Text> pluginAttributes = new LinkedList<Text> ();
-		pluginAttributes.add(values.get(57));
-		pluginAttributes.add(values.get(58));
-		pluginAttributes.add(values.get(59));
-		pluginAttributes.add(values.get(62));
-		pluginAttributes.add(values.get(110));
-		pluginAttributes.add(values.get(111));
-		pluginAttributes.add(values.get(112));
-		pluginAttributes.add(values.get(113));
+		List<String> pluginAttributes = new LinkedList<String> ();
+		pluginAttributes.add(values.get(57).toString());
+		pluginAttributes.add(values.get(58).toString());
+		pluginAttributes.add(values.get(59).toString());
+		pluginAttributes.add(values.get(62).toString());
+		pluginAttributes.add(values.get(110).toString());
+		pluginAttributes.add(values.get(111).toString());
+		pluginAttributes.add(values.get(112).toString());
+		pluginAttributes.add(values.get(113).toString());
 		deviceModel.setPluginAttributes(pluginAttributes);
 		
-		List<Text> osAttributes = new LinkedList<Text> ();
-		osAttributes.add(values.get(54));
-		osAttributes.add(values.get(55));
-		osAttributes.add(values.get(56));
+		List<String> osAttributes = new LinkedList<String> ();
+		osAttributes.add(values.get(54).toString());
+		osAttributes.add(values.get(55).toString());
+		osAttributes.add(values.get(56).toString());
 		String normalized = ScreenResolutionNormalizer.normalize(values.get(65).toString());
-		osAttributes.add(new Text(normalized)); //screen resolution
-		osAttributes.add(values.get(74));
-		osAttributes.add(values.get(91));
-		osAttributes.add(values.get(92));
-		osAttributes.add(values.get(93));
-		osAttributes.add(values.get(94));
-		osAttributes.add(values.get(99));
+		osAttributes.add(normalized); //screen resolution
+		osAttributes.add(values.get(74).toString());
+		osAttributes.add(values.get(91).toString());
+		osAttributes.add(values.get(92).toString());
+		osAttributes.add(values.get(93).toString());
+		osAttributes.add(values.get(94).toString());
+		osAttributes.add(values.get(99).toString());
 		deviceModel.setOsAttributes(osAttributes);
 		
-		List<Text> connectionAttributes = new LinkedList<Text> ();
-		connectionAttributes.add(values.get(150));
-		connectionAttributes.add(values.get(152));
-		connectionAttributes.add(values.get(153));
-		connectionAttributes.add(values.get(154));
-		connectionAttributes.add(values.get(161));
-		connectionAttributes.add(values.get(396));
-		connectionAttributes.add(values.get(445));
-		connectionAttributes.add(values.get(446));
-		connectionAttributes.add(values.get(449));
+		List<String> connectionAttributes = new LinkedList<String> ();
+		connectionAttributes.add(values.get(150).toString());
+		connectionAttributes.add(values.get(152).toString());
+		connectionAttributes.add(values.get(153).toString());
+		connectionAttributes.add(values.get(154).toString());
+		connectionAttributes.add(values.get(161).toString());
+		connectionAttributes.add(values.get(396).toString());
+		connectionAttributes.add(values.get(445).toString());
+		connectionAttributes.add(values.get(446).toString());
+		connectionAttributes.add(values.get(449).toString());
 		//os
-		connectionAttributes.add(values.get(45));
-		connectionAttributes.add(values.get(46));
-		connectionAttributes.add(values.get(70));
-		connectionAttributes.add(values.get(71));
+		connectionAttributes.add(values.get(45).toString());
+		connectionAttributes.add(values.get(46).toString());
+		connectionAttributes.add(values.get(70).toString());
+		connectionAttributes.add(values.get(71).toString());
 		deviceModel.setConnectionAttributes(connectionAttributes);
 		
 		return deviceModel;
 	}
 	
 	public List<Text> extractText(List<Text> values) {
-		List<Text> valueList = new ArrayListTextWritable ();
+		List<Text> valueList = new ArrayListWritable<Text> ();
 		//transaction info
 		valueList.add(0, values.get(1));
 		valueList.add(1, values.get(2));
@@ -186,7 +277,6 @@ public class DeviceAttributeExtractor {
 		browser.setEnabledFl(values.get(31).toString());
 		browser.setEnabledIm(values.get(32).toString());
 		browser.setEnabledJs(values.get(33).toString());
-		//browser.setFlashGuid(values.get(36).toString());
 		browser.setFlashLang(values.get(37).toString());
 		browser.setFlashOs(values.get(38).toString());
 		browser.setFlashVersion(values.get(42).toString());

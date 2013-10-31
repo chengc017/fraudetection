@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.vormetric.device.utils;
+package com.vormetric.device.extract;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -33,19 +33,19 @@ public class AttibutesConvertor {
 	
 	public static final int BROWSER_ATT_INDEX_START = 0;
 	public static final int BROWSER_ATT_LENGTH = 13;
-	public static final int BROWSER_ATT_INDEX_END = 12;
+	public static final int BROWSER_ATT_INDEX_END = 13;
 	
 	public static final int PLUGIN_ATT_INDEX_START = 13;
 	public static final int PLUGIN_ATT_LENGTH = 8;
-	public static final int PLUGIN_ATT_INDEX_END = 20;
+	public static final int PLUGIN_ATT_INDEX_END = 21;
 	
 	public static final int OS_ATT_INDEX_START = 21;
 	public static final int OS_ATT_LENGTH = 10;
-	public static final int OS_ATT_INDEX_END = 30;
+	public static final int OS_ATT_INDEX_END = 31;
 	
 	public static final int CONNECTION_ATT_INDEX_START = 31;
 	public static final int CONNECTION_ATT_LENGTH = 13;
-	public static final int CONNECTION_ATT_INDEX_END = 43;
+	public static final int CONNECTION_ATT_INDEX_END = 44;
 	
 	public static final int TOTAL_ATT_LENGTH = BROWSER_ATT_LENGTH
 			+ PLUGIN_ATT_LENGTH + OS_ATT_LENGTH + CONNECTION_ATT_LENGTH;

@@ -18,13 +18,13 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.lib.input.CSVLineRecordReader;
-import org.apache.hadoop.mapreduce.lib.input.CSVTextInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+
+import com.vormetric.mapred.csv.CSVInputFormat;
 
 /**
  * @author shawnkuo
@@ -79,10 +79,6 @@ public class TxDataSelectionJob extends Configured implements Tool {
 		conf.setInt("mapred.job.reuse.jvm.num.tasks", 3);
 		conf.set("output_path", out.toString());
 		
-		conf.set(CSVLineRecordReader.FORMAT_DELIMITER, "\"");
-		conf.set(CSVLineRecordReader.FORMAT_SEPARATOR, ",");
-		conf.setBoolean(CSVLineRecordReader.IS_ZIPFILE, false);
-		
 		conf.set("mapred.textoutputformat.separatorText", ",");
 		
 		// delete exist output path
@@ -98,7 +94,7 @@ public class TxDataSelectionJob extends Configured implements Tool {
 		job.setJarByClass(TxDataSelectionJob.class);
 		job.setNumReduceTasks(3);
 		
-		job.setInputFormatClass(CSVTextInputFormat.class);  //CSVTextInputFormat
+		job.setInputFormatClass(CSVInputFormat.class);  //
 		job.setOutputFormatClass(TextOutputFormat.class);
 		
 		job.setOutputKeyClass(LongWritable.class);

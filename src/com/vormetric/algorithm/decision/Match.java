@@ -9,7 +9,7 @@ package com.vormetric.algorithm.decision;
  */
 public class Match {
 
-	public double total;
+	public double score;
 	public double browser;
 	public double plugin;
 	public double os;
@@ -23,7 +23,7 @@ public class Match {
 	public Match(boolean result, double total, double browser, double plugin,
 			double os, double connection) {
 		this.result = result;
-		this.total = total;
+		this.score = total;
 		this.browser = browser;
 		this.plugin = plugin;
 		this.os = os;
@@ -33,6 +33,6 @@ public class Match {
 	public String toString() {
 		return String
 				.format("<Match: %s, Score: %s [browser: %s, plugin: %s, os: %s, connection: %s]>",
-						result, total, browser, plugin, os, connection);
+						result, score, browser, plugin, os, connection);
 	}
 }

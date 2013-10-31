@@ -22,8 +22,8 @@ import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Logger;
 
+import com.vormetric.device.extract.AttibutesConvertor;
 import com.vormetric.device.model.DeviceModel;
-import com.vormetric.device.utils.AttibutesConvertor;
 import com.vormetric.device.utils.Md5Utils;
 
 /**
