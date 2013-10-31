@@ -121,7 +121,7 @@ public class SampleDeviceIdentifierClient {
 				  .append("New devices detected: " + newDeviceNumber + "\n")
 				  .append("Seen devices detected: " + seenDeviceNumber)
 				  .append("\n" + exactSameSeenDeviceNumber)
-				  .append(" of which are exactly the same with the existing ones,\n")
+				  .append(" of which are exact same with the existing ones,\n")
 				  .append("the rest may have some slight changes but still considered as same(seen) devices.\n")
 				  .append("----------------------------------------------------------------------------------");
 		System.out.println(statistics.toString());
