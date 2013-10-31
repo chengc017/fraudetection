@@ -241,13 +241,6 @@ public class DBOutputSVMDeviceIdentificationJob extends Configured implements
 			}
 			
 			for(int k=0; k<duplicates.size(); k++) {
-				//count
-				context.getCounter("Device Identification", "Number of Devices")
-						.increment(1);
-				if (duplicates.get(k) instanceof List<?>) {
-					context.getCounter("Device Identification",
-							"Groups of Merged Devices").increment(1);
-				}
 				//db
 				write(duplicates.get(k), context);
 			}
