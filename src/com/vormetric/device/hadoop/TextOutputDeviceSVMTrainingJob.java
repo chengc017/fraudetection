@@ -57,9 +57,6 @@ public class TextOutputDeviceSVMTrainingJob extends Configured implements Tool {
 		//2. reusing the JVM
 		conf.setInt("mapred.job.reuse.jvm.num.tasks", 3);
 		
-		conf.set(CSVLineRecordReader.FORMAT_DELIMITER, "\"");
-		conf.set(CSVLineRecordReader.FORMAT_SEPARATOR, ",");
-		conf.setBoolean(CSVLineRecordReader.IS_ZIPFILE, false);
 		//
 		conf.setBoolean("mapred.input.dir.recursive", true);
 		

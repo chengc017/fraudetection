@@ -65,9 +65,6 @@ public class DeviceDataExtractorJob extends Configured implements Tool {
 		conf.setInt("mapred.job.reuse.jvm.num.tasks", 3);
 		conf.set("output_path", out.toString());
 		
-		conf.set(CSVLineRecordReader.FORMAT_DELIMITER, "\"");
-		conf.set(CSVLineRecordReader.FORMAT_SEPARATOR, ",");
-		conf.setBoolean(CSVLineRecordReader.IS_ZIPFILE, false);
 		//
 		conf.setBoolean("mapred.input.dir.recursive", true);
 		
