@@ -21,7 +21,6 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.CSVLineRecordReader;
-import org.apache.hadoop.mapreduce.lib.input.CSVTextInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
@@ -31,6 +30,7 @@ import com.twitter.elephantbird.mapreduce.io.ProtobufWritable;
 import com.vormetric.device.extract.DeviceAttributeExtractor;
 import com.vormetric.device.proto.DeviceProto.Device;
 import com.vormetric.fd.preprocess.TxDataSelectionJob.TxDataSelectionMapper;
+import com.vormetric.mapred.csv.CSVInputFormat;
 import com.vormetric.mapred.io.ProtobufDeviceWritable;
 import com.vormetric.mapred.output.ProtobufOutputFormat;
 
@@ -80,7 +80,7 @@ public class DeviceDataExtractorJob extends Configured implements Tool {
 		job.setJobName("Extract Device Attribute");
 		job.setJarByClass(DeviceDataExtractorJob.class);
 		
-		job.setInputFormatClass(CSVTextInputFormat.class);
+		job.setInputFormatClass(CSVInputFormat.class);
 		job.setOutputFormatClass(ProtobufOutputFormat.class);
 		
 		job.setOutputKeyClass(LongWritable.class);

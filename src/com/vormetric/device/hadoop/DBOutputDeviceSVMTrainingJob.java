@@ -5,7 +5,6 @@ package com.vormetric.device.hadoop;
 
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Vector;
 
@@ -29,7 +28,6 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.CSVLineRecordReader;
-import org.apache.hadoop.mapreduce.lib.input.CSVTextInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -37,6 +35,8 @@ import org.apache.hadoop.util.ToolRunner;
 import com.vormetric.algorithm.similarities.JaccardCoefficientSimilarity;
 import com.vormetric.device.extract.DeviceAttributeExtractor;
 import com.vormetric.device.model.DeviceModel;
+import com.vormetric.device.utils.ConfigUtil;
+import com.vormetric.mapred.csv.CSVInputFormat;
 
 /**
  * @author xioguo
@@ -83,7 +83,7 @@ public class DBOutputDeviceSVMTrainingJob extends Configured implements Tool {
 		Path in = new Path(args[0]);
 		
 		Configuration conf = HBaseConfiguration.create();
-		conf.set("hbase.zookeeper.quorum", "localhost");
+		conf.set("hbase.zookeeper.quorum", ConfigUtil.getHbaseHost());
 		
 		HBaseAdmin admin = new HBaseAdmin(conf);
 		// if table dose not exist, create one now.
@@ -110,7 +110,7 @@ public class DBOutputDeviceSVMTrainingJob extends Configured implements Tool {
 		job.setJarByClass(DBOutputDeviceSVMTrainingJob.class);
 		
 		//map's input format
-		job.setInputFormatClass(CSVTextInputFormat.class);
+		job.setInputFormatClass(CSVInputFormat.class);
 		//reduce's output format
 		job.setOutputFormatClass(TableOutputFormat.class);
 		

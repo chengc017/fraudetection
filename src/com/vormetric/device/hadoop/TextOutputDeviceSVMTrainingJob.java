@@ -4,7 +4,6 @@
 package com.vormetric.device.hadoop;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 
@@ -21,7 +20,6 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.CSVLineRecordReader;
-import org.apache.hadoop.mapreduce.lib.input.CSVTextInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
@@ -31,6 +29,7 @@ import org.apache.hadoop.util.ToolRunner;
 import com.vormetric.algorithm.similarities.JaccardCoefficientSimilarity;
 import com.vormetric.device.extract.DeviceAttributeExtractor;
 import com.vormetric.device.model.DeviceModel;
+import com.vormetric.mapred.csv.CSVInputFormat;
 
 /**
  * @author shawnkuo
@@ -73,7 +72,7 @@ public class TextOutputDeviceSVMTrainingJob extends Configured implements Tool {
 		job.setJobName("Device Similarity");
 		job.setJarByClass(TextOutputDeviceSVMTrainingJob.class);
 		
-		job.setInputFormatClass(CSVTextInputFormat.class);
+		job.setInputFormatClass(CSVInputFormat.class);
 		job.setOutputFormatClass(TextOutputFormat.class);
 		
 		job.setOutputKeyClass(Text.class);

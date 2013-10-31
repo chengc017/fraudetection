@@ -29,7 +29,6 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.CSVLineRecordReader;
-import org.apache.hadoop.mapreduce.lib.input.CSVTextInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -41,6 +40,8 @@ import com.vormetric.algorithm.similarities.JaccardCoefficientSimilarity;
 import com.vormetric.device.extract.DeviceAttributeExtractor;
 import com.vormetric.device.hbase.DeviceDAO;
 import com.vormetric.device.model.DeviceModel;
+import com.vormetric.device.utils.ConfigUtil;
+import com.vormetric.mapred.csv.CSVInputFormat;
 
 /**
  * @author shawnkuo
@@ -91,7 +92,7 @@ public class DBOutputSVMDeviceIdentificationJob extends Configured implements
 		Path in = new Path(args[0]);
 		
 		Configuration conf = HBaseConfiguration.create();
-		conf.set("hbase.zookeeper.quorum", "localhost");
+		conf.set("hbase.zookeeper.quorum", ConfigUtil.getHbaseHost());
 		
 		admin = new HBaseAdmin(conf);
 		// if table dose not exist, create one now.
@@ -118,7 +119,7 @@ public class DBOutputSVMDeviceIdentificationJob extends Configured implements
 		job.setJarByClass(DBOutputSVMDeviceIdentificationJob.class);
 		
 		//map's input format
-		job.setInputFormatClass(CSVTextInputFormat.class);
+		job.setInputFormatClass(CSVInputFormat.class);
 		//reduce's output format
 		job.setOutputFormatClass(TableOutputFormat.class);
 		
@@ -173,10 +174,12 @@ public class DBOutputSVMDeviceIdentificationJob extends Configured implements
 						+ values.size() + " columns.");
 				return;
 			}
-			String browserStringHash = values.get(13).toString();
-			if(browserStringHash.equals("")) return;
-			DeviceModel device = DeviceAttributeExtractor.getInstance().extractModel(values);
-			context.write(new Text(browserStringHash), device);
+			String broserHash = values.get(13).toString();
+			if(broserHash.equals("")) return;
+			
+			DeviceModel device = DeviceAttributeExtractor.getInstance()
+					.extractModel(values);
+			context.write(new Text(broserHash), device);
 		}
 	} 
 	
@@ -214,15 +217,10 @@ public class DBOutputSVMDeviceIdentificationJob extends Configured implements
 				v.add(dm);
 			}
 			
-			if(key.toString().equals("98c2be676aca885697e96e548b0cfbb7")) {
-				System.out.println(v.size());
-			}
-			
 			Match match = new Match(false);
 			for (int i = 0; i < v.size(); i++) {
 				Object buddy = null;
 				Object dmX = v.get(i);
-				
 				for (int j = 0; j < duplicates.size(); j++) {
 					Object dmY = duplicates.get(j);
 					match = decision.match(dmX, dmY);
@@ -237,7 +235,7 @@ public class DBOutputSVMDeviceIdentificationJob extends Configured implements
 					duplicates.add(dmX);
 				} else {
 					Object unioned = null;
-					if(match.result && match.total != 1) {
+					if(match.result && match.score != 1) {
 						unioned = DIHelper.union(dmX, buddy);
 					} else {
 						unioned = dmX;
