@@ -3,7 +3,9 @@
  */
 package com.vormetric.algorithm.decision;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,16 +27,27 @@ public class SVMDeviceSimilarityDecision<T1, T2> implements SimilarityDecision<T
 	
 	public SVMDeviceSimilarityDecision (Similarity similarity) {
 		this.similarity = similarity;
-	}
-	
-	//load svm model
-	static {
 		try {
-			model = svm.svm_load_model("train/ds.model");  //device similarity model
+			model = svm.svm_load_model(new BufferedReader(
+					new InputStreamReader(this.getClass()
+							.getResourceAsStream("ds.model"))));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
+	
+	//load svm model
+	static {
+//		try {
+			//model = svm.svm_load_model("train/ds.model");  //device similarity model
+//			model = svm.svm_load_model(new BufferedReader(
+//					new InputStreamReader(SVMDeviceSimilarityDecision.class
+//							.getResourceAsStream("train/ds.model"))));
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
+	}
+	
 	
 	public Match match(Object a, Object b) {
 		if(a instanceof DeviceModel && b instanceof DeviceModel) {
