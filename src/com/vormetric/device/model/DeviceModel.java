@@ -12,8 +12,7 @@ import java.util.List;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
-import com.vormetric.device.extract.AttibutesConvertor;
-import com.vormetric.mapred.io.ArrayListWritable;
+import vormetric.mapred.io.ArrayListWritable;
 
 /**
  * @author xioguo
